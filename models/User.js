@@ -9,13 +9,20 @@ const userSchema = new mongoose.Schema(
     city: { type: String, required: true },
     role: { type: String, required: true },
     password: { type: String, required: true },
-
-    // 🔑 Token fields
     token: { type: String, default: null },
     tokenExpiry: { type: Date, default: null }
   },
   { timestamps: true }
 );
+
+// Virtual relation
+userSchema.virtual("attendances", {
+  ref: "Attendance",
+  localField: "_id",
+  foreignField: "user",
+});
+userSchema.set("toObject", { virtuals: true });
+userSchema.set("toJSON", { virtuals: true });
 
 // Hash password before save
 userSchema.pre("save", async function (next) {
@@ -29,4 +36,4 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.models.User || mongoose.model("User", userSchema);
