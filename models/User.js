@@ -8,7 +8,11 @@ const userSchema = new mongoose.Schema(
     number: { type: String, required: true },
     city: { type: String, required: true },
     role: { type: String, required: true },
-    password: { type: String, required: true }
+    password: { type: String, required: true },
+
+    // 🔑 Token fields
+    token: { type: String, default: null },
+    tokenExpiry: { type: Date, default: null }
   },
   { timestamps: true }
 );
@@ -25,5 +29,4 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);
