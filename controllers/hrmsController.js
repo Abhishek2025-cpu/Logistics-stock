@@ -60,12 +60,6 @@ exports.punchOut = async (req, res) => {
     const now = moment().tz("Asia/Kolkata");
     const outtime = now.format("HH:mm");
 
-    if (now.isBefore(moment("16:00", "HH:mm").tz("Asia/Kolkata"))) {
-      return res.status(400).json({
-        status: 400,
-        message: "Punch-out only allowed after 4 PM",
-      });
-    }
 
     const attendance = await Attendance.findOne({
       _id: req.params.id,
