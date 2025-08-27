@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const User =  require("../models/User.js");
+const User = require("../models/User.js");
 
 // Generate JWT
 const generateToken = (id, role) => {
@@ -11,6 +11,7 @@ exports.register = async (req, res) => {
   try {
     const { name, email, number, city, password, role } = req.body;
 
+    // Validation
     if (!name || !email || !number || !city || !password) {
       return res.status(400).json({
         status: 400,
@@ -18,6 +19,7 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Check existing user
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(409).json({
@@ -26,13 +28,12 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Create new user
     const user = await User.create({ name, email, number, city, password, role });
-    const token = generateToken(user._id, user.role);
 
     return res.status(201).json({
       status: 201,
       message: "Registration successful",
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -52,45 +53,40 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const token = req.headers["authorization"]; // token from header
 
-    if (!token) {
-      return res.status(401).json({
-        status: 401,
-        message: "Authorization token required",
+    if (!email || !password) {
+      return res.status(400).json({
+        status: 400,
+        message: "Email and password are required",
       });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-      if (err) {
-        return res.status(403).json({
-          status: 403,
-          message: "Invalid or expired token",
-        });
-      }
-
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(404).json({
-          status: 404,
-          message: "User not found",
-        });
-      }
-
-      const isMatch = await user.matchPassword(password);
-      if (!isMatch) {
-        return res.status(401).json({
-          status: 401,
-          message: "Invalid email or password",
-        });
-      }
-
-      return res.status(200).json({
-        status: 200,
-        message: "Login successful",
-        role: user.role,
-        token,
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        message: "User not found",
       });
+    }
+
+    // Check password
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        status: 401,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Generate token at login
+    const token = generateToken(user._id, user.role);
+
+    return res.status(200).json({
+      status: 200,
+      message: "Login successful",
+      role: user.role,
+      token,
     });
   } catch (error) {
     return res.status(500).json({
@@ -99,6 +95,7 @@ exports.login = async (req, res) => {
     });
   }
 };
+
 
 // @desc Logout User
 exports.logout = async (req, res) => {
