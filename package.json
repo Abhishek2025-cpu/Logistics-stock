@@ -1,0 +1,36 @@
+{
+  "name": "bidyanodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "AbhishekPearl",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "accesscontrol": "^2.2.1",
+    "bcryptjs": "^3.0.2",
+    "casl": "^0.2.0",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.14",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-jwt": "^8.5.1",
+    "express-rate-limit": "^8.0.1",
+    "fs": "^0.0.1-security",
+    "geoip-lite": "^1.4.10",
+    "http": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "node-geocoder": "^4.4.1",
+    "nodemailer": "^7.0.5",
+    "nodemon": "^3.1.10",
+    "path": "^0.12.7",
+    "uuid": "^11.1.0"
+  }
+}
