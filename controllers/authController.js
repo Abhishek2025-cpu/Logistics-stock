@@ -7,7 +7,7 @@ const generateToken = (id, role) => {
 };
 
 // @desc Register User
-export const register = async (req, res) => {
+exports.register = async (req, res) => {
   try {
     const { name, email, number, city, password, role } = req.body;
 
@@ -49,7 +49,7 @@ export const register = async (req, res) => {
 };
 
 // @desc Login User
-export const login = async (req, res) => {
+exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const token = req.headers["authorization"]; // token from header
@@ -101,7 +101,7 @@ export const login = async (req, res) => {
 };
 
 // @desc Logout User
-export const logout = async (req, res) => {
+exports.logout = async (req, res) => {
   return res.status(200).json({
     status: 200,
     message: "Logout successful, clear token on client",
