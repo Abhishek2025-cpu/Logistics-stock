@@ -9,7 +9,7 @@ const fs = require('fs');
 const cors = require('cors');
 dotenv.config();
 const app = express();
-import authRoutes from "./routes/authRoutes.js";
+const authRoutes =  require("./routes/authRoutes.js");
 
 
 // Middleware
