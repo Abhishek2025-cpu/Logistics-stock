@@ -9,7 +9,7 @@ const fs = require('fs');
 const cors = require('cors');
 dotenv.config();
 const app = express();
-
+import authRoutes from "./routes/authRoutes.js";
 
 
 // Middleware
@@ -30,6 +30,7 @@ connectDB();
 
 // Default route
 app.get('/', (req, res) => res.send('API is running...'));
+app.use("/api/auth", authRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
