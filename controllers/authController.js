@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User.js");
+const Attendance = require("../models/Attendance");
 
 // Function to calculate expiry at next midnight IST
 const getMidnightExpiry = () => {
@@ -118,5 +119,28 @@ exports.logout = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ status: 500, message: error.message });
+  }
+};
+
+
+
+
+// @desc Get all users with attendance
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .populate("attendances") // populate attendance for each user
+      .select("-password");   // hide password field
+
+    return res.status(200).json({
+      status: 200,
+      message: "Users fetched successfully",
+      data: users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
   }
 };

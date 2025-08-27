@@ -1,15 +1,41 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
-const attendanceSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    selfie: { type: String, required: true }, // Cloudinary URL
-    intime: { type: String, required: true },
-    outtime: { type: String },
-    date: { type: String, required: true },
-    day: { type: String, required: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    number: { type: String, required: true },
+    city: { type: String, required: true },
+    role: { type: String, required: true },
+    password: { type: String, required: true },
+    token: { type: String, default: null },
+    tokenExpiry: { type: Date, default: null }
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Attendance", attendanceSchema);
+// Virtual relation (User ↔ Attendance)
+userSchema.virtual("attendances", {
+  ref: "Attendance",
+  localField: "_id",
+  foreignField: "user",
+});
+
+// Ensure virtuals are included in JSON
+userSchema.set("toObject", { virtuals: true });
+userSchema.set("toJSON", { virtuals: true });
+
+// Hash password before save
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+// Compare password
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+module.exports = mongoose.model("User", userSchema);
