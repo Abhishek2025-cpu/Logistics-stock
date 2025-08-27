@@ -9,6 +9,7 @@ const verifyToken = (req) => {
 };
 
 // 📌 Punch In API
+// 📌 Punch In API
 exports.punchIn = async (req, res) => {
   try {
     const decoded = verifyToken(req);
@@ -22,13 +23,7 @@ exports.punchIn = async (req, res) => {
     const day = now.format("dddd");
     const intime = now.format("HH:mm");
 
-    if (now.isAfter(moment("10:00", "HH:mm").tz("Asia/Kolkata"))) {
-      return res.status(400).json({
-        status: 400,
-        message: "Punch-in not allowed after 10 AM",
-      });
-    }
-
+    // 🔹 Removed the "before 10 AM" restriction for now
     const existingAttendance = await Attendance.findOne({ user: decoded.id, date });
     if (existingAttendance) {
       return res.status(400).json({
@@ -39,7 +34,7 @@ exports.punchIn = async (req, res) => {
 
     const attendance = await Attendance.create({
       user: decoded.id,
-      selfie: req.file.path,
+      selfie: req.file.path, // Cloudinary URL
       intime,
       date,
       day,
@@ -51,9 +46,11 @@ exports.punchIn = async (req, res) => {
       attendance,
     });
   } catch (error) {
+    console.error("PunchIn Error:", error); // 👈 Add this for debugging
     return res.status(500).json({ status: 500, message: error.message });
   }
 };
+
 
 // 📌 Punch Out API
 exports.punchOut = async (req, res) => {
