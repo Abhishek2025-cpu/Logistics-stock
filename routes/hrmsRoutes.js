@@ -12,6 +12,7 @@ const {
   requestLeave,
   getLeaveRequestsByUser,
   getAllLeaveRequests,
+  getPunchDetails,
 
 } = require("../controllers/hrmsController");
 
@@ -20,6 +21,8 @@ router.post("/attendance/punchin", upload.single("selfie"), punchIn);
 
 // Punch Out (PUT)
 router.put("/attendance/punchout/:id", punchOut);
+// Get punch details
+router.get("/attendance", getPunchDetails);
 
 // User's own attendance
 router.get("/attendance/me", getUserAttendance);
@@ -37,6 +40,7 @@ router.post("/leave/request", requestLeave);
 // Leave management
 router.get("/leave", getAllLeaveRequests); // Admin/HR only
 router.get("/leave/me", getLeaveRequestsByUser); // User/Employee only
+
 
 
 module.exports = router;
