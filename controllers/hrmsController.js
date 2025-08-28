@@ -336,3 +336,50 @@ exports.requestLeave = async (req, res) => {
     return res.status(500).json({ status: 500, message: error.message });
   }
 };
+
+
+// Get all leave requests (Admin/HR only)
+exports.getAllLeaveRequests = async (req, res) => {
+  try {
+    const decoded = verifyAdminHRToken(req); // Validate Admin/HR
+
+    const leaves = await Attendance.find({ isLeave: true })
+      .populate("user", "name email role") // Populate basic user info
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      status: 200,
+      message: "All leave requests fetched successfully.",
+      leaves,
+    });
+  } catch (error) {
+    console.error("getAllLeaveRequests Error:", error);
+    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({
+      status: error.message.includes("Unauthorized") ? 403 : 500,
+      message: error.message,
+    });
+  }
+};
+
+
+// Get leave requests for logged-in user
+exports.getLeaveRequestsByUser = async (req, res) => {
+  try {
+    const decoded = verifyToken(req); // Validate User/Employee
+
+    const leaves = await Attendance.find({ user: decoded.id, isLeave: true })
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      status: 200,
+      message: "User leave requests fetched successfully.",
+      leaves,
+    });
+  } catch (error) {
+    console.error("getLeaveRequestsByUser Error:", error);
+    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({
+      status: error.message.includes("Unauthorized") ? 403 : 500,
+      message: error.message,
+    });
+  }
+};
