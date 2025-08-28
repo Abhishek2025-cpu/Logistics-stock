@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { generateSalary, getMySalary, getAllSalaries } = require("../controllers/payrollController");
+const { generatePayroll, getPayrollByUser, getMyPayroll } = require("../controllers/payrollController");
 
 // HR/Admin generates salary for a user
-router.post("/salary/generate/:userId", generateSalary);
+router.post("/salary/generate/:userId", generatePayroll);
 
 // Employee views their salaries
-router.get("/salary/me", getMySalary);
+router.get("/salary/me", getPayrollByUser);
 
 // HR/Admin gets all salaries
-router.get("/salary", getAllSalaries);
+router.get("/salary", getMyPayroll);
 
 module.exports = router;
