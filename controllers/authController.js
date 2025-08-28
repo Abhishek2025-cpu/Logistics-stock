@@ -21,6 +21,17 @@ const generateToken = (id, role, expiryDate) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn });
 };
 
+const verifyAdminHRToken = (req) => {
+  const decoded = verifyToken(req);
+  const userRole = decoded.role ? decoded.role.toLowerCase() : '';
+
+  if (userRole !== 'admin' && userRole !== 'hr') {
+    throw new Error("Unauthorized: Only Admin or HR can perform this action");
+  }
+  return decoded;
+};
+
+
 // @desc Register User
 exports.register = async (req, res) => {
   try {
