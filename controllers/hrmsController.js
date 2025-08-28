@@ -106,6 +106,39 @@ exports.punchOut = async (req, res) => {
   }
 };
 
+// 📌 Get Punch In/Out Details (Employee/User Side)
+exports.getPunchDetails = async (req, res) => {
+  try {
+    const decoded = verifyToken(req); // Employee token
+
+    // Fetch attendance records of the logged-in user
+    const attendances = await Attendance.find({ user: decoded.id })
+      .sort({ date: -1 }) // Latest first
+      .select("date day intime outtime selfie");
+
+    if (!attendances || attendances.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: "No punch records found",
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      message: "Punch details fetched successfully",
+      records: attendances,
+    });
+  } catch (error) {
+    console.error("GetPunchDetails Error:", error);
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+
+
+
 // 📌 Get User Attendance
 exports.getUserAttendance = async (req, res) => {
   try {
