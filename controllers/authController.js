@@ -24,18 +24,29 @@ const generateToken = (id, role, expiryDate) => {
 // @desc Register User
 exports.register = async (req, res) => {
   try {
-    const { name, email, number, city, password, role } = req.body;
+    const { name, email, number, city, password } = req.body;
 
     if (!name || !email || !number || !city || !password) {
       return res.status(400).json({ status: 400, message: "All fields are required" });
     }
 
+    // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(409).json({ status: 409, message: "User already exists" });
     }
 
-    const user = await User.create({ name, email, number, city, password, role });
+    // Create user with default role & department as null, key as null
+    const user = await User.create({
+      name,
+      email,
+      number,
+      city,
+      password,
+      role: null,          // default null
+      department: null,    // default null
+      key: null            // default null (Employee ID will be updated later)
+    });
 
     // Generate token valid till midnight IST
     const expiry = getMidnightExpiry();
@@ -51,12 +62,65 @@ exports.register = async (req, res) => {
       message: "Registration successful",
       token,
       expiry,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        number: user.number,
+        city: user.city,
+        role: user.role,             // null
+        department: user.department, // null
+        key: user.key                // null
+      },
     });
   } catch (error) {
     return res.status(500).json({ status: 500, message: error.message });
   }
 };
+
+
+exports.updateUserDetails = async (req, res) => {
+  try {
+    const decoded = verifyAdminHRToken(req); // Only HR/Admin can update
+    const { userId } = req.params;
+    const { role, department, key } = req.body;
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ status: 404, message: "User not found" });
+    }
+
+    // Update only allowed fields
+    if (role !== undefined) user.role = role;
+    if (department !== undefined) user.department = department;
+    if (key !== undefined) user.key = key;
+
+    await user.save();
+
+    return res.status(200).json({
+      status: 200,
+      message: "User details updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        number: user.number,
+        city: user.city,
+        role: user.role,
+        department: user.department,
+        key: user.key,
+      },
+    });
+  } catch (error) {
+    console.error("updateUserDetails Error:", error);
+    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({
+      status: error.message.includes("Unauthorized") ? 403 : 500,
+      message: error.message,
+    });
+  }
+};
+
 
 // @desc Login User
 exports.login = async (req, res) => {

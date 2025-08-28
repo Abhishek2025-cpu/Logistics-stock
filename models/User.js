@@ -7,11 +7,17 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     number: { type: String, required: true },
     city: { type: String, required: true },
-    // Role is now just a String, no enum, allowing for more flexibility
-    role: { type: String, required: true },
     password: { type: String, required: true },
+
+    // Fields managed later by HR/Admin
+    role: { type: String, default: null },        // No longer required at registration
+    department: { type: String, default: null },  // Added department
+    key: { type: String, default: null },         // EmployeeID field
+
+    // Auth/session fields
     token: { type: String, default: null },
     tokenExpiry: { type: Date, default: null },
+
     // Fields for employee status
     isActive: { type: Boolean, default: true },
     activatedAt: { type: Date, default: Date.now }, // Default to now for new active users
@@ -20,22 +26,23 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Virtual relation
+// Virtual relation with Attendance
 userSchema.virtual("attendances", {
   ref: "Attendance",
   localField: "_id",
   foreignField: "user",
 });
+
 userSchema.set("toObject", { virtuals: true });
 userSchema.set("toJSON", { virtuals: true });
 
 // Hash password before save
 userSchema.pre("save", async function (next) {
-  if (this.isModified("password")) { // Only hash if password is changed/new
+  if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 10);
   }
-  // Ensure role is stored in lowercase for consistency
-  if (this.isModified("role")) {
+  // Ensure role is always lowercase when updated
+  if (this.isModified("role") && this.role) {
     this.role = this.role.toLowerCase();
   }
   next();

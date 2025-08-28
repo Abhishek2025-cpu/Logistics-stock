@@ -4,6 +4,8 @@ const { register, login, logout,getAllUsers } = require("../controllers/authCont
 const router = express.Router();
 
 router.post("/register", register);
+router.put("/users/:userId/update", updateUserDetails);
+
 router.post("/login", login);
 router.post("/logout", logout);
 router.get('/all-emp',getAllUsers);
