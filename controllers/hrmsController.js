@@ -272,3 +272,60 @@ exports.deleteUserRecord = async (req, res) => {
     });
   }
 };
+
+
+
+exports.requestLeave = async (req, res) => {
+  try {
+    const decoded = verifyToken(req); // Decode employee/user from JWT
+    const { empCode, empName, leaveType, reason, selectedDate } = req.body;
+
+    if (!empCode || !empName || !leaveType || !reason || !selectedDate) {
+      return res.status(400).json({
+        status: 400,
+        message: "empCode, empName, leaveType, reason, and selectedDate are required.",
+      });
+    }
+
+    // Ensure user exists
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ status: 404, message: "User not found." });
+    }
+
+    // Prevent duplicate attendance/leave for the same date
+    const existingEntry = await Attendance.findOne({
+      user: decoded.id,
+      date: selectedDate,
+    });
+
+    if (existingEntry) {
+      return res.status(400).json({
+        status: 400,
+        message: "You already have an attendance or leave record for this date.",
+      });
+    }
+
+    // Create leave request
+    const leaveRequest = await Attendance.create({
+      user: decoded.id,
+      empCode,
+      empName,
+      date: selectedDate,
+      day: moment(selectedDate).tz("Asia/Kolkata").format("dddd"),
+      isLeave: true,
+      leaveType,
+      leaveReason: reason,
+      leaveStatus: "pending", // Default: pending
+    });
+
+    return res.status(201).json({
+      status: 201,
+      message: "Leave request submitted successfully.",
+      leaveRequest,
+    });
+  } catch (error) {
+    console.error("requestLeave Error:", error);
+    return res.status(500).json({ status: 500, message: error.message });
+  }
+};

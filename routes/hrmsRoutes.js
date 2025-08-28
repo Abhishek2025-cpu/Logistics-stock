@@ -9,6 +9,7 @@ const {
   updateLeaveRequest,
   updateUserStatus,
   deleteUserRecord,
+  requestLeave,
 } = require("../controllers/hrmsController");
 
 // Punch In (POST)
@@ -29,5 +30,6 @@ router.put('/leave/:leaveId', updateLeaveRequest);
 // User Management (Admin/HR only)
 router.put('/users/:userId/status', updateUserStatus);
 router.delete('/users/:userId', deleteUserRecord);
+router.post("/leave/request", requestLeave);
 
 module.exports = router;
