@@ -186,20 +186,21 @@ exports.updateLeaveRequest = async (req, res) => {
 
 
 // 2. API to make employees status as active/inactive with date and time
-exports.updateEmployeeStatus = async (req, res) => {
+// 1. API to update user status (active/inactive)
+exports.updateUserStatus = async (req, res) => {
   try {
     const decoded = verifyAdminHRToken(req); // Only Admin/HR can access
-    const { employeeId } = req.params;
+    const { userId } = req.params;
     const { isActive } = req.body; // boolean: true for active, false for inactive
 
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({ status: 400, message: "Invalid 'isActive' value. Must be true or false." });
     }
 
-    const user = await User.findById(employeeId);
+    const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ status: 404, message: "Employee not found." });
+      return res.status(404).json({ status: 404, message: "User not found." });
     }
 
     user.isActive = isActive;
@@ -214,7 +215,7 @@ exports.updateEmployeeStatus = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      message: `Employee status updated to ${isActive ? 'active' : 'inactive'} successfully.`,
+      message: `User status updated to ${isActive ? 'active' : 'inactive'} successfully.`,
       user: {
         id: user._id,
         name: user.name,
@@ -225,33 +226,37 @@ exports.updateEmployeeStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("UpdateEmployeeStatus Error:", error);
-    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({ status: error.message.includes("Unauthorized") ? 403 : 500, message: error.message });
+    console.error("updateUserStatus Error:", error);
+    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({
+      status: error.message.includes("Unauthorized") ? 403 : 500,
+      message: error.message
+    });
   }
 };
 
-// 3. API to delete employees record permanently
-exports.deleteEmployeeRecord = async (req, res) => {
+
+// 2. API to delete user record permanently
+exports.deleteUserRecord = async (req, res) => {
   try {
     const decoded = verifyAdminHRToken(req); // Only Admin/HR can access
-    const { employeeId } = req.params;
+    const { userId } = req.params;
 
-    if (decoded.id.toString() === employeeId) {
-        return res.status(403).json({ status: 403, message: "You cannot delete your own account via this API." });
+    if (decoded.id.toString() === userId) {
+      return res.status(403).json({ status: 403, message: "You cannot delete your own account via this API." });
     }
 
-    const user = await User.findByIdAndDelete(employeeId);
+    const user = await User.findByIdAndDelete(userId);
 
     if (!user) {
-      return res.status(404).json({ status: 404, message: "Employee not found." });
+      return res.status(404).json({ status: 404, message: "User not found." });
     }
 
-    // ⭐ IMPORTANT: Delete associated attendance/leave records as well
-    await Attendance.deleteMany({ user: employeeId });
+    // ⭐ Delete associated attendance/leave records as well
+    await Attendance.deleteMany({ user: userId });
 
     return res.status(200).json({
       status: 200,
-      message: "Employee record deleted permanently.",
+      message: "User record deleted permanently.",
       deletedUser: {
         id: user._id,
         name: user.name,
@@ -259,7 +264,10 @@ exports.deleteEmployeeRecord = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("DeleteEmployeeRecord Error:", error);
-    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({ status: error.message.includes("Unauthorized") ? 403 : 500, message: error.message });
+    console.error("deleteUserRecord Error:", error);
+    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({
+      status: error.message.includes("Unauthorized") ? 403 : 500,
+      message: error.message
+    });
   }
 };
