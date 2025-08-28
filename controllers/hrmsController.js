@@ -1,4 +1,5 @@
 const Attendance = require("../models/Attendance");
+const User = require("../models/User");     
 const jwt = require("jsonwebtoken");
 const moment = require("moment-timezone");
 
