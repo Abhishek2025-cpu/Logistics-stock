@@ -93,6 +93,7 @@ exports.login = async (req, res) => {
       status: 200,
       message: "Login successful",
       role: user.role,
+      userId: user._id,
       token,
       expiry,
     });
