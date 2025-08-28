@@ -9,7 +9,6 @@ const {
   updateLeaveRequest,
   updateUserStatus,
   deleteUserRecord,
-
 } = require("../controllers/hrmsController");
 
 // Punch In (POST)
@@ -24,12 +23,11 @@ router.get("/attendance/me", getUserAttendance);
 // All employees attendance (Admin)
 router.get("/attendance", getAllAttendance);
 
+// Leave management
 router.put('/leave/:leaveId', updateLeaveRequest);
 
-// Employee Management
-router.put('/employees/:employeeId/status',updateUserStatus);
-router.delete('/employees/:employeeId', deleteUserRecord);
+// User Management (Admin/HR only)
+router.put('/users/:userId/status', updateUserStatus);
+router.delete('/users/:userId', deleteUserRecord);
 
 module.exports = router;
-
-
