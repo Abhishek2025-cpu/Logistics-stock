@@ -7,8 +7,8 @@ const {
   getUserAttendance,
   getAllAttendance,
   updateLeaveRequest,
-  updateEmployeeStatus,
-  deleteEmployeeRecord,
+  updateUserStatus,
+  deleteUserRecord,
 
 } = require("../controllers/hrmsController");
 
