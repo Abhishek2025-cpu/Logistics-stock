@@ -10,6 +10,9 @@ const {
   updateUserStatus,
   deleteUserRecord,
   requestLeave,
+  getLeaveRequestsByUser,
+  getAllLeaveRequests,
+
 } = require("../controllers/hrmsController");
 
 // Punch In (POST)
