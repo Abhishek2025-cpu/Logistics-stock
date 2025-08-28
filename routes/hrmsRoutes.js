@@ -27,8 +27,8 @@ router.get("/attendance", getAllAttendance);
 router.put('/leave/:leaveId', updateLeaveRequest);
 
 // Employee Management
-router.put('/employees/:employeeId/status',updateEmployeeStatus);
-router.delete('/employees/:employeeId', deleteEmployeeRecord);
+router.put('/employees/:employeeId/status',updateUserStatus);
+router.delete('/employees/:employeeId', deleteUserRecord);
 
 module.exports = router;
 
