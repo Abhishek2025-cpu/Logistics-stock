@@ -6,6 +6,10 @@ const {
   punchOut,
   getUserAttendance,
   getAllAttendance,
+  updateLeaveRequest,
+  updateEmployeeStatus,
+  deleteEmployeeRecord,
+
 } = require("../controllers/hrmsController");
 
 // Punch In (POST)
@@ -20,4 +24,12 @@ router.get("/attendance/me", getUserAttendance);
 // All employees attendance (Admin)
 router.get("/attendance", getAllAttendance);
 
+router.put('/leave/:leaveId', updateLeaveRequest);
+
+// Employee Management
+router.put('/employees/:employeeId/status',updateEmployeeStatus);
+router.delete('/employees/:employeeId', deleteEmployeeRecord);
+
 module.exports = router;
+
+
