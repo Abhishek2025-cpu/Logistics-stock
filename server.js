@@ -14,6 +14,9 @@ const app = express();
 const authRoutes =  require("./routes/authRoutes.js");
 const hrmsRoutes = require("./routes/hrmsRoutes");
 const payrollRoutes = require("./routes/payrollRoutes");
+const EmployeeRoutes = require("./routes/employeeRoutes");
+
+
 
 
 // Middleware
@@ -37,7 +40,7 @@ app.get('/', (req, res) => res.send('API is running...'));
 app.use("/api/auth", authRoutes);
 app.use("/api/hrms",hrmsRoutes);
 app.use("/api/payroll",payrollRoutes);
-
+app.use("/api/employee",EmployeeRoutes);
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
