@@ -100,7 +100,7 @@ exports.updateUserDetails = async (req, res) => {
   try {
     const decoded = verifyAdminHRToken(req); // Only HR/Admin can update
     const { userId } = req.params;
-    const { role, department, key } = req.body;
+    const { role, department, key, basePay } = req.body;
 
     // Find user
     const user = await User.findById(userId);
@@ -109,9 +109,10 @@ exports.updateUserDetails = async (req, res) => {
     }
 
     // Update only allowed fields
-    if (role !== undefined) user.role = role;
+    if (role !== undefined) user.role = role.toLowerCase();
     if (department !== undefined) user.department = department;
     if (key !== undefined) user.key = key;
+    if (basePay !== undefined) user.basePay = basePay; // 🔹 new field
 
     await user.save();
 
@@ -127,6 +128,7 @@ exports.updateUserDetails = async (req, res) => {
         role: user.role,
         department: user.department,
         key: user.key,
+        basePay: user.basePay, // 🔹 included in response
       },
     });
   } catch (error) {

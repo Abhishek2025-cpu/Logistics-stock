@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
     // Auth/session fields
     token: { type: String, default: null },
     tokenExpiry: { type: Date, default: null },
+    basePay: { type: Number, default: 0 }, // Monthly base salary for payroll
+
+
+
 
     // Fields for employee status
     isActive: { type: Boolean, default: true },
