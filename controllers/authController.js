@@ -119,7 +119,7 @@ exports.updateUserDetails = async (req, res) => {
       status: 200,
       message: "User details updated successfully",
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         number: user.number,
