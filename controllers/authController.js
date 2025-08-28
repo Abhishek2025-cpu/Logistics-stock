@@ -32,6 +32,12 @@ const verifyAdminHRToken = (req) => {
 };
 
 
+const verifyToken = (req) => {
+  const token = req.headers["authorization"];
+  if (!token) throw new Error("Authorization token required");
+  return jwt.verify(token, process.env.JWT_SECRET);
+};
+
 // @desc Register User
 exports.register = async (req, res) => {
   try {
