@@ -13,6 +13,7 @@ dotenv.config();
 const app = express();
 const authRoutes =  require("./routes/authRoutes.js");
 const hrmsRoutes = require("./routes/hrmsRoutes");
+const payrollRoutes = require("./routes/payrollRoutes");
 
 
 // Middleware
@@ -35,6 +36,7 @@ connectDB();
 app.get('/', (req, res) => res.send('API is running...'));
 app.use("/api/auth", authRoutes);
 app.use("/api/hrms",hrmsRoutes);
+app.use("/api/payroll",payrollRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
