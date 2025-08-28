@@ -141,35 +141,38 @@ exports.getAllAttendance = async (req, res) => {
 exports.updateLeaveRequest = async (req, res) => {
   try {
     const decoded = verifyAdminHRToken(req); // Only Admin/HR can access
-    const { attendanceId } = req.params; // Changed from leaveId to attendanceId
+    const { leaveId } = req.params;  // use leaveId instead of attendanceId
     const { status, remarks } = req.body; // status can be 'approved' or 'rejected'
 
     if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ status: 400, message: "Invalid status. Must be 'approved' or 'rejected'." });
+      return res.status(400).json({ 
+        status: 400, 
+        message: "Invalid status. Must be 'approved' or 'rejected'." 
+      });
     }
 
-    // Find the attendance record that is also a leave request
-    const leaveRecord = await Attendance.findOne({ _id: attendanceId, isLeave: true });
+    // Find the leave record by _id where isLeave = true
+    const leaveRecord = await Attendance.findOne({ _id: leaveId, isLeave: true });
 
     if (!leaveRecord) {
-      return res.status(404).json({ status: 404, message: "Leave record not found or is not a leave request." });
+      return res.status(404).json({ 
+        status: 404, 
+        message: "Leave record not found or is not a leave request." 
+      });
     }
 
-    // Check if the leave has already been processed
+    // Check if already processed
     if (leaveRecord.leaveStatus !== 'pending') {
-      return res.status(400).json({ status: 400, message: `Leave request has already been ${leaveRecord.leaveStatus}.` });
+      return res.status(400).json({ 
+        status: 400, 
+        message: `Leave request has already been ${leaveRecord.leaveStatus}.` 
+      });
     }
 
+    // Update leave status
     leaveRecord.leaveStatus = status;
-    // We can use the 'remarks' from the request body as the 'leaveReason' if needed
-    // Or, if 'remarks' is specifically for admin comments, we could add another field.
-    // For now, let's update the existing 'leaveReason' or add it as an admin_remarks if you add a new field.
-    // If you want admin-specific remarks, add a new field like `adminRemarks` to the Attendance model.
-    // leaveRecord.adminRemarks = remarks || '';
-    // For simplicity, let's assume 'remarks' here is the final reason/comment for approval/rejection.
-    leaveRecord.leaveReason = remarks || leaveRecord.leaveReason; // Update or keep original if no new remarks
-
-    leaveRecord.reviewedBy = decoded.id; // Store who reviewed it
+    leaveRecord.adminRemarks = remarks || ""; // 👈 Better: keep separate adminRemarks field
+    leaveRecord.reviewedBy = decoded.id;
     leaveRecord.reviewedAt = moment().tz("Asia/Kolkata").toDate();
 
     await leaveRecord.save();
@@ -180,10 +183,14 @@ exports.updateLeaveRequest = async (req, res) => {
       leaveRecord,
     });
   } catch (error) {
-    console.error("UpdateLeaveRequest Error:", error);
-    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({ status: error.message.includes("Unauthorized") ? 403 : 500, message: error.message });
+    console.error("updateLeaveRequest Error:", error);
+    return res.status(error.message.includes("Unauthorized") ? 403 : 500).json({ 
+      status: error.message.includes("Unauthorized") ? 403 : 500, 
+      message: error.message 
+    });
   }
 };
+
 
 
 // 2. API to make employees status as active/inactive with date and time
