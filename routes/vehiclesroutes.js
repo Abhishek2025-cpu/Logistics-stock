@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const upload = require("../middlewares/cloudinaryUpload");
+const upload = require("../middleware/uploadProfile");
 const { verifyAdminHRToken } = require("../middlewares/auth");
 const vehicleController = require("../controllers/vehicleController");
 
