@@ -134,9 +134,50 @@ const delete__WasteMatrial = async (req, res) => {
   }
 };
 
+const status__Update__WasteMatrial = async (req, res) => {
+  try {
+    verifyToken(req);
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["pending", "complete"].includes(status)) {
+      return res
+        .status(400)
+        .json({ status: 400, message: "Invalid status value" });
+    }
+
+    const existingWaste = await WasteMaterialModal.findById(id);
+    if (!existingWaste) {
+      return res
+        .status(404)
+        .json({ status: 404, message: "Waste Material not found" });
+    }
+
+    if (existingWaste.status === status) {
+      return res.status(400).json({
+        status: 400,
+        message: `Status is already '${status}'`,
+      });
+    }
+
+    existingWaste.status = status;
+    await existingWaste.save();
+
+    return res.status(200).json({
+      status: 200,
+      message: "Waste Material status updated successfully",
+      waste: existingWaste,
+    });
+  } catch (error) {
+    return res.status(500).json({ status: 500, message: error.message });
+  }
+};
+
 module.exports = {
   create__WasteMaterial,
   get__WasteMaterial,
   update__WasteMaterial,
   delete__WasteMatrial,
+  status__Update__WasteMatrial,
 };
