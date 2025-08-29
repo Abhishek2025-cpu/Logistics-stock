@@ -4,10 +4,12 @@ const {
   get__Client,
   update__Client,
 } = require("../controllers/clientsController");
+const { delete__Client } = require("../controllers/clientsController");
 const router = express.Router();
 
 router.get("/clients", get__Client);
 router.post("/clients", registerClient);
 router.put("/clients/:id", update__Client);
+router.delete("/clients/:id", delete__Client);
 
 module.exports = router;
