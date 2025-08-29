@@ -74,7 +74,61 @@ exports.loginEmployee = async (req, res) => {
 exports.getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find();
-    res.json(employees);
+
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0]; // YYYY-MM-DD
+
+    const result = [];
+
+    for (const emp of employees) {
+      // find today's attendance
+      const attendance = await Attendance.findOne({
+        employee: emp._id,
+        date: todayStr
+      });
+
+      let status = "A"; // default Absent
+
+      if (attendance) {
+        if (attendance.punchIn && attendance.punchOut) {
+          status = "P"; // Full day Present
+        } else if (attendance.punchIn && !attendance.punchOut) {
+          status = "HD"; // Half Day
+        }
+      }
+
+      result.push({
+        _id: emp._id,
+        employeeId: emp.employeeId,
+        name: emp.name,
+        number: emp.number,
+        email: emp.email,
+        department: emp.department,
+        role: emp.role,
+        salary: emp.salary,
+        workingHours: emp.workingHours,
+        workingDays: emp.workingDays,
+        leave: emp.leave,
+        warnings: emp.warnings || 0,
+
+        // Attendance details
+        attendance: attendance
+          ? {
+              date: attendance.date,
+              punchIn: attendance.punchIn,
+              punchOut: attendance.punchOut,
+              punchInSelfie: attendance.punchInSelfie,
+              punchOutSelfie: attendance.punchOutSelfie,
+              status
+            }
+          : {
+              date: todayStr,
+              status
+            }
+      });
+    }
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
