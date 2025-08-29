@@ -85,11 +85,21 @@ exports.getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).json({ message: "Employee not found" });
-    res.json(employee);
+
+    const attendance = await Attendance.find({ employee: employee._id });
+    const warningCount = attendance.reduce((sum, a) => sum + a.warnings, 0);
+
+    res.json({
+      ...employee.toObject(),
+      attendance,
+      warnings: warningCount,
+      payrollAffected: warningCount > 2 // example rule
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Update Employee
 exports.updateEmployee = async (req, res) => {
