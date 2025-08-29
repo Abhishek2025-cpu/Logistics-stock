@@ -4,6 +4,7 @@ const {
   create__WasteMaterial,
   update__WasteMaterial,
   delete__WasteMatrial,
+  status__Update__WasteMatrial,
 } = require("../controllers/Waste__Matrial_Controller");
 
 const upload = require("../middleware/uploadProfile");
@@ -22,5 +23,9 @@ waste_Matrial_Router.put(
   update__WasteMaterial
 );
 waste_Matrial_Router.delete("/waste_matrial/:id", delete__WasteMatrial);
+waste_Matrial_Router.patch(
+  "/waste_matrial/status/:id",
+  status__Update__WasteMatrial
+);
 
 module.exports = waste_Matrial_Router;
