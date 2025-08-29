@@ -22,11 +22,41 @@ exports.createEmployee = async (req, res) => {
 
     const mediaUrls = req.files?.map(file => file.path) || [];
 
+    // 🔍 Check if user already exists
+    let user = await User.findOne({ $or: [{ email }, { number }] });
+
+    if (!user) {
+      // create user if not exists
+      user = new User({
+        name,
+        email,
+        number,
+        city: address, // mapping address to city if needed
+        password,
+        role,
+        department,
+        key: employeeId,
+        basePay: salary
+      });
+      await user.save();
+    }
+
+    // Create employee linked to this user
     const employee = new Employee({
-      employeeId, name, number, email, address,
-      companyName, workingHours, workingDays,
-      department, role, salary, leave,
-      password, 
+      user: user._id, // 🔗 linking user
+      employeeId,
+      name,
+      number,
+      email,
+      address,
+      companyName,
+      workingHours,
+      workingDays,
+      department,
+      role,
+      salary,
+      leave,
+      password,
       media: mediaUrls
     });
 
@@ -37,12 +67,14 @@ exports.createEmployee = async (req, res) => {
     res.status(201).json({
       message: "Employee registered successfully",
       employee,
+      user, // show linked user info too
       token
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Employee Login
 exports.loginEmployee = async (req, res) => {

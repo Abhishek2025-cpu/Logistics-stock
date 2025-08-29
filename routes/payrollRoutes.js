@@ -15,9 +15,7 @@ router.get("/payroll", (req, res, next) => {
 }, payrollController.getPayrolls);
 
 // Single payroll
-router.get("/payroll/:id", (req, res, next) => {
-  try { verifyAdminHRToken(req); next(); } catch (e) { return res.status(401).json({ error: e.message }); }
-}, payrollController.getPayrollById);
+router.get("/payroll/:id", payrollController.getPayrollById);
 
 // Adjust (approve, tweak deductions, notes)
 router.patch("/payroll/:id", (req, res, next) => {
