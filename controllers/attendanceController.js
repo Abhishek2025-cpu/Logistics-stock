@@ -7,7 +7,10 @@ const todayStr = () => new Date().toISOString().split("T")[0];
 // Punch In (Employee)
 exports.punchIn = async (req, res) => {
   try {
-    const employee = req.user; // from token middleware
+    const decoded = req.user; // comes from verifyToken
+    const employee = await Employee.findById(decoded.id); // get full record
+    if (!employee) return res.status(404).json({ message: "Employee not found" });
+
     const selfie = req.file?.path;
     const now = new Date();
 
@@ -23,23 +26,37 @@ exports.punchIn = async (req, res) => {
       punchInSelfie: selfie
     });
 
-    // Check late > 15 minutes
-    const startHour = parseInt(employee.workingHours.split("-")[0]); // crude parse
-    const punchHour = now.getHours();
-    const punchMin = now.getMinutes();
+    // Parse workingHours properly
+    // Example: "9am - 6pm" → start = 9
     let isLate = false;
+    if (employee.workingHours) {
+      const startTime = employee.workingHours.split("-")[0].trim(); // e.g. "9am"
+      const match = startTime.match(/(\d+)(am|pm)?/i);
+      if (match) {
+        let startHour = parseInt(match[1]);
+        const meridian = match[2]?.toLowerCase();
+        if (meridian === "pm" && startHour < 12) startHour += 12;
+        if (meridian === "am" && startHour === 12) startHour = 0;
 
-    if (punchHour > startHour || (punchHour === startHour && punchMin > 15)) {
-      attendance.warnings = 1;
+        const punchHour = now.getHours();
+        const punchMin = now.getMinutes();
+
+        if (punchHour > startHour || (punchHour === startHour && punchMin > 15)) {
+          attendance.warnings = 1;
+          isLate = true;
+        }
+      }
     }
 
     await attendance.save();
-    res.status(201).json({ message: "Punch In recorded", attendance });
+    res.status(201).json({
+      message: isLate ? "Punch In recorded (Late)" : "Punch In recorded",
+      attendance
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
 // Punch Out (Employee)
 exports.punchOut = async (req, res) => {
   try {
