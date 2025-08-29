@@ -1,24 +1,38 @@
+// models/payroll.js
 const mongoose = require("mongoose");
 
-const payrollSchema = new mongoose.Schema(
-  {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    month: { type: String, required: true }, // e.g. "2025-08"
-    baseSalary: { type: Number, required: true }, // fixed monthly salary
-    workingDays: { type: Number, default: 0 }, // total working days in the month
-    presentDays: { type: Number, default: 0 },
-    absentDays: { type: Number, default: 0 },
-    halfDays: { type: Number, default: 0 },
-    overTimeHours: { type: Number, default: 0 },
+const deductionSchema = new mongoose.Schema({
+  absence: { type: Number, default: 0 },       // amount deducted for Absent days
+  halfDay: { type: Number, default: 0 },       // amount deducted for HD
+  leave:   { type: Number, default: 0 },       // amount deducted for deductible leaves
+  late:    { type: Number, default: 0 },       // late penalty
+  other:   { type: Number, default: 0 }
+}, { _id: false });
 
-    leaveDeduction: { type: Number, default: 0 }, // Salary deduction for leave
-    overtimePay: { type: Number, default: 0 }, // Extra pay for overtime
-    finalSalary: { type: Number, default: 0 }, // Net salary to be paid
+const payrollSchema = new mongoose.Schema({
+  employee: { type: mongoose.Schema.Types.ObjectId, ref: "Employee", required: true },
+  month: { type: String, required: true }, // "YYYY-MM"
+  baseSalary: { type: Number, required: true },    // monthly salary from employee
+  expectedWorkingDays: { type: Number, required: true },
+  presentDays: { type: Number, default: 0 },
+  halfDays: { type: Number, default: 0 },
+  absences: { type: Number, default: 0 },
+  nonDeductLeaves: { type: Number, default: 0 },
+  deductLeaves: { type: Number, default: 0 },
+  lateWarnings: { type: Number, default: 0 },
 
-    calculatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // HR/Admin
-    calculatedAt: { type: Date, default: Date.now },
-  },
-  { timestamps: true }
-);
+  perDayRate: { type: Number, required: true },
+  grossEarnings: { type: Number, required: true }, // usually baseSalary
+  deductions: { type: deductionSchema, default: () => ({}) },
+  netPay: { type: Number, required: true },
+
+  status: { type: String, enum: ["Pending", "Approved", "Paid"], default: "Pending" },
+  notes: { type: String },
+
+  paidAt: { type: Date },
+  paymentRef: { type: String } // UTR/Txn id if any
+}, { timestamps: true });
+
+payrollSchema.index({ employee: 1, month: 1 }, { unique: true }); // one row per emp-month
 
 module.exports = mongoose.model("Payroll", payrollSchema);
