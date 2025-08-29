@@ -62,7 +62,8 @@ exports.register = async (req, res) => {
       password,
       role: null,          // default null
       department: null,    // default null
-      key: null            // default null (Employee ID will be updated later)
+      key: null   ,         // default null (Employee ID will be updated later),
+       _skipHash: true  
     });
 
     // Generate token valid till midnight IST
