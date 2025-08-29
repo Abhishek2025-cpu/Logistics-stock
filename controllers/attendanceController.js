@@ -81,27 +81,64 @@ exports.punchOut = async (req, res) => {
 
     // Fetch employee working hours
     const employee = await Employee.findById(decoded.id);
-    let status = "A";
+
+    let status = "A"; // default absent
+    let requiredMinutes = 8 * 60; // default 8 hours
+    let startH = 9, startM = 0, endH = 18, endM = 0; // default 09:00–18:00
+
+    if (employee.workingHours) {
+      const workHours = employee.workingHours.trim();
+
+      // Case 1: format "09:00-18:00"
+      if (workHours.includes(":") && workHours.includes("-")) {
+        const [startStr, endStr] = workHours.split("-");
+        const [sh, sm] = startStr.split(":").map(Number);
+        const [eh, em] = endStr.split(":").map(Number);
+
+        startH = sh ?? 9;
+        startM = sm ?? 0;
+        endH = eh ?? 18;
+        endM = em ?? 0;
+
+        requiredMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+      }
+      // Case 2: format "9am - 6pm"
+      else if (/am|pm/i.test(workHours)) {
+        const parts = workHours.split("-");
+        if (parts.length === 2) {
+          const parseAmPm = (str) => {
+            const match = str.trim().match(/(\d+)(?::(\d+))?\s*(am|pm)/i);
+            if (!match) return { h: 9, m: 0 };
+            let h = parseInt(match[1]);
+            const m = parseInt(match[2] || "0");
+            const meridian = match[3].toLowerCase();
+            if (meridian === "pm" && h < 12) h += 12;
+            if (meridian === "am" && h === 12) h = 0;
+            return { h, m };
+          };
+          const start = parseAmPm(parts[0]);
+          const end = parseAmPm(parts[1]);
+
+          startH = start.h;
+          startM = start.m;
+          endH = end.h;
+          endM = end.m;
+
+          requiredMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+        }
+      }
+    }
 
     if (attendance.punchIn && attendance.punchOut) {
-      const workHours = employee.workingHours || "09:00-18:00"; // fallback
-      const [startStr, endStr] = workHours.split("-");
-      
-      // Convert to minutes
-      const [startH, startM] = startStr.split(":").map(Number);
-      const [endH, endM] = endStr.split(":").map(Number);
-      const requiredMinutes = (endH * 60 + endM) - (startH * 60 + startM);
-
       // Calculate actual worked minutes
       const workedMinutes = Math.floor(
         (attendance.punchOut - attendance.punchIn) / (1000 * 60)
       );
 
       // Check late by >15 minutes
-      const punchInHour = attendance.punchIn.getHours();
-      const punchInMin = attendance.punchIn.getMinutes();
+      const punchInTotalMin =
+        attendance.punchIn.getHours() * 60 + attendance.punchIn.getMinutes();
       const startTotalMin = startH * 60 + startM;
-      const punchInTotalMin = punchInHour * 60 + punchInMin;
 
       if (punchInTotalMin > startTotalMin + 15) {
         attendance.warnings = (attendance.warnings || 0) + 1;
@@ -118,7 +155,6 @@ exports.punchOut = async (req, res) => {
     }
 
     attendance.status = status;
-
     await attendance.save();
 
     res.json({
@@ -132,6 +168,7 @@ exports.punchOut = async (req, res) => {
 };
 
 
+
 // Manual Correction (HR/Admin only)
 exports.correctAttendance = async (req, res) => {
   try {
@@ -142,23 +179,71 @@ exports.correctAttendance = async (req, res) => {
       attendance = new Attendance({ employee: employeeId, date });
     }
 
-    attendance.punchIn = punchIn ? new Date(punchIn) : attendance.punchIn;
-    attendance.punchOut = punchOut ? new Date(punchOut) : attendance.punchOut;
+    if (punchIn) attendance.punchIn = new Date(punchIn);
+    if (punchOut) attendance.punchOut = new Date(punchOut);
 
-    // recalc status
+    // Recalculate status
     if (attendance.punchIn && attendance.punchOut) {
-      const actualHours = (attendance.punchOut - attendance.punchIn) / (1000 * 60 * 60);
       const employee = await Employee.findById(employeeId);
-      const [start, end] = employee.workingHours.split("-");
-      const startH = parseInt(start);
-      const endH = parseInt(end);
 
-      if (actualHours >= (endH - startH)) {
-        attendance.status = "P";
-      } else if (actualHours >= (endH - startH) / 2) {
-        attendance.status = "HD";
+      let requiredMinutes = 8 * 60; // default 8 hrs
+      let startH = 9, startM = 0, endH = 18, endM = 0; // default 09:00-18:00
+
+      if (employee.workingHours) {
+        const workHours = employee.workingHours.trim();
+
+        // Case 1: "09:00-18:00"
+        if (workHours.includes(":") && workHours.includes("-")) {
+          const [startStr, endStr] = workHours.split("-");
+          const [sh, sm] = startStr.split(":").map(Number);
+          const [eh, em] = endStr.split(":").map(Number);
+
+          startH = sh ?? 9;
+          startM = sm ?? 0;
+          endH = eh ?? 18;
+          endM = em ?? 0;
+
+          requiredMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+        }
+        // Case 2: "9am - 6pm"
+        else if (/am|pm/i.test(workHours)) {
+          const parts = workHours.split("-");
+          if (parts.length === 2) {
+            const parseAmPm = (str) => {
+              const match = str.trim().match(/(\d+)(?::(\d+))?\s*(am|pm)/i);
+              if (!match) return { h: 9, m: 0 };
+              let h = parseInt(match[1]);
+              const m = parseInt(match[2] || "0");
+              const meridian = match[3].toLowerCase();
+              if (meridian === "pm" && h < 12) h += 12;
+              if (meridian === "am" && h === 12) h = 0;
+              return { h, m };
+            };
+            const start = parseAmPm(parts[0]);
+            const end = parseAmPm(parts[1]);
+
+            startH = start.h;
+            startM = start.m;
+            endH = end.h;
+            endM = end.m;
+
+            requiredMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+          }
+        }
+      }
+
+      // Actual worked minutes
+      const workedMinutes = Math.floor(
+        (attendance.punchOut - attendance.punchIn) / (1000 * 60)
+      );
+
+      // Decide status
+      if (workedMinutes >= requiredMinutes) {
+        attendance.status = "P"; // Present
+      } else if (workedMinutes >= requiredMinutes / 2) {
+        attendance.status = "HD"; // Half Day
       } else {
-        attendance.status = "A";
+        attendance.status = "A"; // Absent
       }
     }
 
@@ -168,3 +253,4 @@ exports.correctAttendance = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
