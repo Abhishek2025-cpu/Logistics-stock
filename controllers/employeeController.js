@@ -1,4 +1,5 @@
 const Employee = require("../models/Employee");
+const User = require("../models/User");
 const Attendance = require("../models/Attendance");
 const jwt = require("jsonwebtoken");
 
@@ -22,11 +23,41 @@ exports.createEmployee = async (req, res) => {
 
     const mediaUrls = req.files?.map(file => file.path) || [];
 
+    // 🔍 Check if user already exists
+    let user = await User.findOne({ $or: [{ email }, { number }] });
+
+    if (!user) {
+      // create user if not exists
+      user = new User({
+        name,
+        email,
+        number,
+        city: address, // mapping address to city if needed
+        password,
+        role,
+        department,
+        key: employeeId,
+        basePay: salary
+      });
+      await user.save();
+    }
+
+    // Create employee linked to this user
     const employee = new Employee({
-      employeeId, name, number, email, address,
-      companyName, workingHours, workingDays,
-      department, role, salary, leave,
-      password, 
+      user: user._id, // 🔗 linking user
+      employeeId,
+      name,
+      number,
+      email,
+      address,
+      companyName,
+      workingHours,
+      workingDays,
+      department,
+      role,
+      salary,
+      leave,
+      password,
       media: mediaUrls
     });
 
@@ -37,6 +68,7 @@ exports.createEmployee = async (req, res) => {
     res.status(201).json({
       message: "Employee registered successfully",
       employee,
+      user, // show linked user info too
       token
     });
   } catch (error) {
@@ -44,19 +76,61 @@ exports.createEmployee = async (req, res) => {
   }
 };
 
+
 // Employee Login
+
 exports.loginEmployee = async (req, res) => {
   try {
     const { identifier, password } = req.body; // identifier = number OR email
 
-    const employee = await Employee.findOne({
+    // 1. Try Employee first
+    let employee = await Employee.findOne({
       $or: [{ number: identifier }, { email: identifier }]
     });
 
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    // 2. If not found, try User
+    if (!employee) {
+      const user = await User.findOne({
+        $or: [{ number: identifier }, { email: identifier }]
+      });
 
-    const isMatch = await employee.comparePassword(password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+      if (!user) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // check password
+      const isMatch = await user.matchPassword(password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+
+      // If user exists but not linked to Employee → auto-create Employee
+      employee = await Employee.findOne({ user: user._id });
+      if (!employee) {
+        employee = new Employee({
+          user: user._id,
+          employeeId: user.key || `EMP-${Date.now()}`,
+          name: user.name,
+          number: user.number,
+          email: user.email,
+          address: user.city, // mapping
+          companyName: "DefaultCompany", // you can adjust
+          workingHours: "09:00-18:00",
+          workingDays: "Mon-Fri",
+          department: user.department || "General",
+          role: user.role || "staff",
+          salary: user.basePay || 0,
+          password: user.password // already hashed
+        });
+        await employee.save();
+      }
+    } else {
+      // Employee found → check password
+      const isMatch = await employee.comparePassword(password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+    }
 
     const token = generateToken(employee);
 
