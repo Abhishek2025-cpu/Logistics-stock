@@ -18,6 +18,7 @@ router.post("/employees", (req, res, next) => {
 // EMPLOYEE LOGIN
 router.post("/employees/login", employeeController.loginEmployee);
 
+
 // READ ALL
 router.get("/get-employees", employeeController.getEmployees);
 
