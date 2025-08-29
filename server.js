@@ -15,6 +15,7 @@ const hrmsRoutes = require("./routes/hrmsRoutes");
 const payrollRoutes = require("./routes/payrollRoutes");
 const EmployeeRoutes = require("./routes/employeeRoutes");
 const clientsRoutes = require("./routes/clients");
+const vehiclesRoutes = require("./routes/vehiclesroutes");
 
 // Middleware
 app.use(
@@ -36,6 +37,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/hrms", hrmsRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/employee", EmployeeRoutes);
+app.use("/api/vehicles", vehiclesRoutes);
+
 app.use("/api", clientsRoutes);
 // Start server
 const PORT = process.env.PORT || 5000;

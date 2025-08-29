@@ -6,7 +6,7 @@ const { verifyAdminHRToken } = require("../middlewares/auth");
 const vehicleController = require("../controllers/vehicleController");
 
 // CREATE
-router.post("/vehicles", (req, res, next) => {
+router.post("/add", (req, res, next) => {
   try {
     verifyAdminHRToken(req);
     next();
@@ -16,13 +16,13 @@ router.post("/vehicles", (req, res, next) => {
 }, upload.array("images", 5), vehicleController.createVehicle);
 
 // READ ALL
-router.get("/vehicles", vehicleController.getVehicles);
+router.get("/get-vehicles", vehicleController.getVehicles);
 
 // READ ONE
-router.get("/vehicles/:id", vehicleController.getVehicleById);
+router.get("/:id", vehicleController.getVehicleById);
 
 // UPDATE
-router.put("/vehicles/:id", (req, res, next) => {
+router.put("/update-vehicles/:id", (req, res, next) => {
   try {
     verifyAdminHRToken(req);
     next();
