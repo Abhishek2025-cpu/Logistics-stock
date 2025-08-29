@@ -1,271 +1,242 @@
-const moment = require("moment-timezone");
+// controllers/payrollController.js
 const Attendance = require("../models/Attendance");
+const Employee = require("../models/Employee");
 const Payroll = require("../models/Payroll");
+const { listMonthDates, toYMD } = require("../utils/dateHelpers");
+const { countExpectedWorkingDays } = require("../utils/workdayHelpers");
+const rules = require("../config/payrollRules");
 
+// Gather stats for one employee for a month, then compute payroll
+async function computePayrollForEmployeeMonth(employee, monthStr) {
+  const monthDates = listMonthDates(monthStr);
+  const ymds = monthDates.map(toYMD);
 
-// 🔒 Verify Admin/HR
-const verifyAdminHRToken = (req) => {
-  const decoded = verifyToken(req);
-  const role = decoded.role?.toLowerCase();
-  if (role !== "admin" && role !== "hr") {
-    throw new Error("Unauthorized: Only Admin or HR can calculate payroll");
-  }
-  return decoded;
-};
-
-
-const verifyToken = (req) => {
-  const token = req.headers["authorization"];
-  if (!token) throw new Error("Authorization token required");
-  return jwt.verify(token, process.env.JWT_SECRET);
-};
-
-
-// 📌 Generate Payroll for a User for a Given Month
-exports.generatePayroll = async (req, res) => {
-  try {
-    const decoded = verifyAdminHRToken(req);
-
-    const { userId, month, baseSalary } = req.body;
-    if (!userId || !month || !baseSalary) {
-      return res
-        .status(400)
-        .json({ status: 400, message: "userId, month, and baseSalary are required" });
-    }
-
-    // Find all attendance records of the month
-    const startDate = moment(month + "-01").startOf("month").format("YYYY-MM-DD");
-    const endDate = moment(month + "-01").endOf("month").format("YYYY-MM-DD");
-
-    const records = await Attendance.find({
-      user: userId,
-      date: { $gte: startDate, $lte: endDate },
-    });
-
-    let presentDays = 0,
-      absentDays = 0,
-      halfDays = 0,
-      overTimeHours = 0;
-
-    records.forEach((rec) => {
-      if (rec.isLeave) {
-        // Approved leave = not counted as present
-        if (rec.leaveStatus === "approved") {
-          absentDays += 1;
-        }
-      } else {
-        if (rec.intime && rec.outtime) {
-          // Half-day logic (e.g., < 4 hrs)
-          const inTimeMoment = moment(rec.intime, "HH:mm");
-          const outTimeMoment = moment(rec.outtime, "HH:mm");
-          const hoursWorked = outTimeMoment.diff(inTimeMoment, "hours");
-
-          if (hoursWorked < 4) {
-            halfDays += 1;
-          } else {
-            presentDays += 1;
-          }
-
-          // Overtime (e.g., > 9 hrs)
-          if (hoursWorked > 9) {
-            overTimeHours += hoursWorked - 9;
-          }
-        } else {
-          absentDays += 1;
-        }
-      }
-    });
-
-    const workingDays = presentDays + absentDays + halfDays;
-
-    // Salary Calculations
-    const perDaySalary = baseSalary / workingDays;
-    const halfDayDeduction = (perDaySalary / 2) * halfDays;
-    const fullDayDeduction = perDaySalary * absentDays;
-
-    const leaveDeduction = halfDayDeduction + fullDayDeduction;
-    const overtimePay = overTimeHours * (perDaySalary / 8); // per hour overtime rate
-    const finalSalary = baseSalary - leaveDeduction + overtimePay;
-
-    const payroll = await Payroll.create({
-      user: userId,
-      month,
-      baseSalary,
-      workingDays,
-      presentDays,
-      absentDays,
-      halfDays,
-      overTimeHours,
-      leaveDeduction,
-      overtimePay,
-      finalSalary,
-      calculatedBy: decoded.id,
-    });
-
-    return res.status(201).json({
-      status: 201,
-      message: "Payroll generated successfully",
-      payroll,
-    });
-  } catch (error) {
-    console.error("GeneratePayroll Error:", error);
-    return res.status(500).json({ status: 500, message: error.message });
-  }
-};
-
-// 📌 Get Payroll of a User (Admin/HR only)
-exports.getPayrollByUser = async (req, res) => {
-  try {
-    verifyAdminHRToken(req);
-
-    const { userId } = req.params;
-    const payrolls = await Payroll.find({ user: userId }).sort({ month: -1 });
-
-    if (!payrolls || payrolls.length === 0) {
-      return res
-        .status(404)
-        .json({ status: 404, message: "No payroll records found" });
-    }
-
-    return res.status(200).json({
-      status: 200,
-      message: "Payroll fetched successfully",
-      payrolls,
-    });
-  } catch (error) {
-    console.error("GetPayrollByUser Error:", error);
-    return res.status(500).json({ status: 500, message: error.message });
-  }
-};
-
-// 📌 Employee can view their Payroll
-exports.getMyPayroll = async (req, res) => {
-  try {
-    const decoded = verifyToken(req);
-
-    const payrolls = await Payroll.find({ user: decoded.id }).sort({ month: -1 });
-
-    if (!payrolls || payrolls.length === 0) {
-      return res
-        .status(404)
-        .json({ status: 404, message: "No payroll records found" });
-    }
-
-    return res.status(200).json({
-      status: 200,
-      message: "Your payroll records",
-      payrolls,
-    });
-  } catch (error) {
-    console.error("GetMyPayroll Error:", error);
-    return res.status(500).json({ status: 500, message: error.message });
-  }
-};
-
-
-// 🧮 Salary Calculation Helper
-const calculateSalary = (records, baseSalary) => {
-  let presentDays = 0,
-    absentDays = 0,
-    halfDays = 0,
-    overTimeHours = 0;
-
-  records.forEach((rec) => {
-    if (rec.isLeave) {
-      if (rec.leaveStatus === "approved") {
-        absentDays += 1;
-      }
-    } else {
-      if (rec.intime && rec.outtime) {
-        const inTimeMoment = moment(rec.intime, "HH:mm");
-        const outTimeMoment = moment(rec.outtime, "HH:mm");
-        const hoursWorked = outTimeMoment.diff(inTimeMoment, "hours");
-
-        if (hoursWorked < 4) {
-          halfDays += 1;
-        } else {
-          presentDays += 1;
-        }
-
-        if (hoursWorked > 9) {
-          overTimeHours += hoursWorked - 9;
-        }
-      } else {
-        absentDays += 1;
-      }
-    }
+  // Fetch all attendance rows for the month
+  const records = await Attendance.find({
+    employee: employee._id,
+    date: { $in: ymds }
   });
 
-  const workingDays = presentDays + absentDays + halfDays;
-  const perDaySalary = baseSalary / (workingDays || 1);
-  const halfDayDeduction = (perDaySalary / 2) * halfDays;
-  const fullDayDeduction = perDaySalary * absentDays;
+  // Tally by status and leaves
+  let presentDays = 0;
+  let halfDays = 0;
+  let absences = 0;
+  let nonDeductLeaves = 0;
+  let deductLeaves = 0;
+  let lateWarnings = 0;
 
-  const leaveDeduction = halfDayDeduction + fullDayDeduction;
-  const overtimePay = overTimeHours * (perDaySalary / 8); // 8 hrs/day
-  const finalSalary = baseSalary - leaveDeduction + overtimePay;
+  // Fast lookup by date
+  const recByDate = new Map(records.map(r => [r.date, r]));
+
+  // Count expected working days in this month
+  const expectedWorkingDays = countExpectedWorkingDays(employee, monthDates);
+
+  // Iterate working days only (non-working days are ignored completely)
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  for (const d of monthDates) {
+    const dayName = dayNames[d.getUTCDay()];
+    // If not a working day, skip
+    const isWorkingDay = countExpectedWorkingDays({ workingDays: employee.workingDays }, [d]) === 1;
+    if (!isWorkingDay) continue;
+
+    const ymd = toYMD(d);
+    const rec = recByDate.get(ymd);
+
+    if (!rec) {
+      // No record = Absent
+      absences += 1;
+      continue;
+    }
+
+    // Late warnings
+    lateWarnings += (rec.warnings || 0);
+
+    // Leaves override status if present (and approved if you require that)
+    if (rec.leaveType) {
+      const nonDed = !!rules.nonDeductibleLeaves[rec.leaveType];
+      if (nonDed) nonDeductLeaves += 1;
+      else deductLeaves += 1;
+      continue;
+    }
+
+    // Status
+    switch (rec.status) {
+      case "P":
+        presentDays += 1;
+        break;
+      case "HD":
+        halfDays += 1;
+        break;
+      case "A":
+      default:
+        absences += 1;
+        break;
+    }
+  }
+
+  // Money math
+  const baseSalary = Number(employee.salary || 0);
+  const perDayRate = expectedWorkingDays > 0 ? baseSalary / expectedWorkingDays : 0;
+
+  // Deduction buckets
+  const absenceDeduction = absences * rules.absenceFraction * perDayRate;
+  const halfDayDeduction = halfDays * rules.halfDayFraction * perDayRate;
+  const leaveDeduction = deductLeaves * perDayRate;
+
+  // Late penalty: allow N free, then each extra late deducts fraction of a day
+  const extraLates = Math.max(0, lateWarnings - rules.lateFreeAllowances);
+  const lateDeduction = extraLates * rules.latePenaltyPerExtraLateDayFraction * perDayRate;
+
+  const grossEarnings = baseSalary; // adjust if you pay OT/incentives
+  const totalDeductions = absenceDeduction + halfDayDeduction + leaveDeduction + lateDeduction;
+
+  const netPay = Math.max(0, Math.round((grossEarnings - totalDeductions) * 100) / 100);
 
   return {
-    workingDays,
+    baseSalary,
+    expectedWorkingDays,
     presentDays,
-    absentDays,
     halfDays,
-    overTimeHours,
-    leaveDeduction,
-    overtimePay,
-    finalSalary,
+    absences,
+    nonDeductLeaves,
+    deductLeaves,
+    lateWarnings,
+    perDayRate: Math.round(perDayRate * 100) / 100,
+    grossEarnings,
+    deductions: {
+      absence: Math.round(absenceDeduction * 100) / 100,
+      halfDay: Math.round(halfDayDeduction * 100) / 100,
+      leave: Math.round(leaveDeduction * 100) / 100,
+      late: Math.round(lateDeduction * 100) / 100,
+      other: 0
+    },
+    netPay
   };
-};
+}
 
-// 📌 Auto Payroll Generation for All Employees
 exports.generateMonthlyPayroll = async (req, res) => {
   try {
-    const decoded = verifyAdminHRToken(req);
+    const { month, employeeId } = req.query; // e.g. month="2025-08"
 
-    const { month } = req.body; // e.g. "2025-08"
-    if (!month) {
-      return res.status(400).json({ status: 400, message: "Month is required (YYYY-MM)" });
+    if (!month) return res.status(400).json({ message: "month (YYYY-MM) is required" });
+
+    const employees = employeeId
+      ? [await Employee.findById(employeeId)]
+      : await Employee.find();
+
+    const results = [];
+
+    for (const emp of employees) {
+      if (!emp) continue;
+      const computed = await computePayrollForEmployeeMonth(emp, month);
+
+      const existing = await Payroll.findOne({ employee: emp._id, month });
+      if (existing) {
+        // Update existing draft
+        existing.baseSalary = computed.baseSalary;
+        existing.expectedWorkingDays = computed.expectedWorkingDays;
+        existing.presentDays = computed.presentDays;
+        existing.halfDays = computed.halfDays;
+        existing.absences = computed.absences;
+        existing.nonDeductLeaves = computed.nonDeductLeaves;
+        existing.deductLeaves = computed.deductLeaves;
+        existing.lateWarnings = computed.lateWarnings;
+        existing.perDayRate = computed.perDayRate;
+        existing.grossEarnings = computed.grossEarnings;
+        existing.deductions = computed.deductions;
+        existing.netPay = computed.netPay;
+        await existing.save();
+        results.push(existing);
+      } else {
+        // Create new draft
+        const row = new Payroll({
+          employee: emp._id,
+          month,
+          status: "Pending",
+          ...computed
+        });
+        await row.save();
+        results.push(row);
+      }
     }
 
-    const startDate = moment(month + "-01").startOf("month").format("YYYY-MM-DD");
-    const endDate = moment(month + "-01").endOf("month").format("YYYY-MM-DD");
+    res.json({ message: "Payroll generated", month, count: results.length, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-    const users = await User.find({ role: "employee" }); // Only employees
-    if (!users || users.length === 0) {
-      return res.status(404).json({ status: 404, message: "No employees found" });
+exports.getPayrolls = async (req, res) => {
+  try {
+    const { month, status, employeeId } = req.query;
+    const q = {};
+    if (month) q.month = month;
+    if (status) q.status = status;
+    if (employeeId) q.employee = employeeId;
+
+    const rows = await Payroll.find(q).populate("employee", "employeeId name number department role salary");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getPayrollById = async (req, res) => {
+  try {
+    const row = await Payroll.findById(req.params.id).populate("employee", "employeeId name number department role salary");
+    if (!row) return res.status(404).json({ message: "Payroll not found" });
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// HR/Admin can tweak components (notes, add other deductions/allowances, approve)
+exports.patchPayroll = async (req, res) => {
+  try {
+    const { deductions, notes, status, grossEarnings } = req.body;
+    const row = await Payroll.findById(req.params.id);
+    if (!row) return res.status(404).json({ message: "Payroll not found" });
+
+    if (grossEarnings != null) row.grossEarnings = Number(grossEarnings);
+    if (notes != null) row.notes = notes;
+
+    // allow adjusting deductions (partial)
+    if (deductions && typeof deductions === "object") {
+      row.deductions.absence = deductions.absence ?? row.deductions.absence;
+      row.deductions.halfDay = deductions.halfDay ?? row.deductions.halfDay;
+      row.deductions.leave = deductions.leave ?? row.deductions.leave;
+      row.deductions.late = deductions.late ?? row.deductions.late;
+      row.deductions.other = deductions.other ?? row.deductions.other;
     }
 
-    let payrolls = [];
+    // recompute net
+    const totDed = row.deductions.absence + row.deductions.halfDay + row.deductions.leave + row.deductions.late + row.deductions.other;
+    row.netPay = Math.max(0, Math.round((row.grossEarnings - totDed) * 100) / 100);
 
-    for (const user of users) {
-      const records = await Attendance.find({
-        user: user._id,
-        date: { $gte: startDate, $lte: endDate },
-      });
+    if (status) row.status = status; // "Pending" | "Approved" | "Paid"
 
-      if (records.length === 0) continue;
+    await row.save();
+    res.json({ message: "Payroll updated", payroll: row });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-      const baseSalary = user.baseSalary || 20000; // fallback if salary not in user model
-      const salaryData = calculateSalary(records, baseSalary);
+// Mark as Paid (disbursement)
+exports.disbursePayroll = async (req, res) => {
+  try {
+    const { paymentRef } = req.body;
+    const row = await Payroll.findById(req.params.id);
+    if (!row) return res.status(404).json({ message: "Payroll not found" });
 
-      const payroll = await Payroll.create({
-        user: user._id,
-        month,
-        baseSalary,
-        ...salaryData,
-        calculatedBy: decoded.id,
-      });
+    row.status = "Paid";
+    row.paidAt = new Date();
+    if (paymentRef) row.paymentRef = paymentRef;
 
-      payrolls.push(payroll);
-    }
-
-    return res.status(201).json({
-      status: 201,
-      message: `Payroll generated for ${payrolls.length} employees for ${month}`,
-      payrolls,
-    });
-  } catch (error) {
-    console.error("GenerateMonthlyPayroll Error:", error);
-    return res.status(500).json({ status: 500, message: error.message });
+    await row.save();
+    res.json({ message: "Payroll disbursed", payroll: row });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
