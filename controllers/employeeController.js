@@ -53,10 +53,14 @@ exports.loginEmployee = async (req, res) => {
       $or: [{ number: identifier }, { email: identifier }]
     });
 
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
 
     const isMatch = await employee.comparePassword(password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const token = generateToken(employee);
 
@@ -69,6 +73,7 @@ exports.loginEmployee = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 
 // Get All Employees

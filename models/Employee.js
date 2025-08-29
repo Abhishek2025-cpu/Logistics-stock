@@ -13,25 +13,30 @@ const employeeSchema = new mongoose.Schema({
   department: { type: String, required: true },
   role: { type: String, required: true },
   salary: { type: Number, required: true },
-  leave: { type: Number, default: 0 }, // default leave balance
+  leave: { type: Number, default: 0 }, // leave balance
   password: { type: String, required: true }, // hashed
   media: [{ type: String }],
-  // models/attendance.js
-// add these fields to your existing schema
-leaveType: { type: String, enum: ["CL", "SL", "PL", "UL"], default: undefined }, // Casual, Sick, Paid(??), Unpaid
-leaveApproved: { type: Boolean, default: false }, // if you want approval gate
 
+  // leave management
+  leaveType: { type: String, enum: ["CL", "SL", "PL", "UL"], default: undefined }, 
+  leaveApproved: { type: Boolean, default: false },
 }, { timestamps: true });
 
-// hash password before save
+// 🔑 Hash password before saving (only if it’s not already hashed)
 employeeSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
+
+  // prevent double-hashing (bcrypt hashes always start with "$2")
+  if (this.password.startsWith("$2")) {
+    return next();
+  }
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// method to compare password
+// 🔑 Compare password
 employeeSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
