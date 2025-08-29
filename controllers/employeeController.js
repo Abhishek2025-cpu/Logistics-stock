@@ -1,4 +1,5 @@
 const Employee = require("../models/Employee");
+const Attendance = require("../models/Attendance");
 const jwt = require("jsonwebtoken");
 
 // helper: generate JWT
