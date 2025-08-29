@@ -77,25 +77,20 @@ exports.getEmployees = async (req, res) => {
     const employees = await Employee.find();
 
     const today = new Date();
-    const todayStr = today.toISOString().split("T")[0]; // YYYY-MM-DD
+    const todayStr = today.toISOString().split("T")[0];
 
     const result = [];
 
     for (const emp of employees) {
-      // find today's attendance
       const attendance = await Attendance.findOne({
         employee: emp._id,
         date: todayStr
       });
 
       let status = "A"; // default Absent
-
       if (attendance) {
-        if (attendance.punchIn && attendance.punchOut) {
-          status = "P"; // Full day Present
-        } else if (attendance.punchIn && !attendance.punchOut) {
-          status = "HD"; // Half Day
-        }
+        if (attendance.punchIn && attendance.punchOut) status = "P";
+        else if (attendance.punchIn && !attendance.punchOut) status = "HD";
       }
 
       result.push({
@@ -104,13 +99,18 @@ exports.getEmployees = async (req, res) => {
         name: emp.name,
         number: emp.number,
         email: emp.email,
+        address: emp.address,
+        companyName: emp.companyName,
+        workingHours: emp.workingHours,
+        workingDays: emp.workingDays,
         department: emp.department,
         role: emp.role,
         salary: emp.salary,
-        workingHours: emp.workingHours,
-        workingDays: emp.workingDays,
         leave: emp.leave,
         warnings: emp.warnings || 0,
+
+        // 🔹 Media (Cloudinary URLs saved at creation)
+        media: emp.media || [],
 
         // Attendance details
         attendance: attendance
@@ -134,6 +134,7 @@ exports.getEmployees = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Get Single Employee
 exports.getEmployeeById = async (req, res) => {
