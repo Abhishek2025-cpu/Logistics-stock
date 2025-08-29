@@ -1,4 +1,5 @@
 const Employee = require("../models/Employee");
+const Attendance = require("../models/Attendance");
 const jwt = require("jsonwebtoken");
 
 // helper: generate JWT
@@ -74,22 +75,87 @@ exports.loginEmployee = async (req, res) => {
 exports.getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find();
-    res.json(employees);
+
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+
+    const result = [];
+
+    for (const emp of employees) {
+      const attendance = await Attendance.findOne({
+        employee: emp._id,
+        date: todayStr
+      });
+
+      let status = "A"; // default Absent
+      if (attendance) {
+        if (attendance.punchIn && attendance.punchOut) status = "P";
+        else if (attendance.punchIn && !attendance.punchOut) status = "HD";
+      }
+
+      result.push({
+        _id: emp._id,
+        employeeId: emp.employeeId,
+        name: emp.name,
+        number: emp.number,
+        email: emp.email,
+        address: emp.address,
+        companyName: emp.companyName,
+        workingHours: emp.workingHours,
+        workingDays: emp.workingDays,
+        department: emp.department,
+        role: emp.role,
+        salary: emp.salary,
+        leave: emp.leave,
+        warnings: emp.warnings || 0,
+
+        // 🔹 Media (Cloudinary URLs saved at creation)
+        media: emp.media || [],
+
+        // Attendance details
+        attendance: attendance
+          ? {
+              date: attendance.date,
+              punchIn: attendance.punchIn,
+              punchOut: attendance.punchOut,
+              punchInSelfie: attendance.punchInSelfie,
+              punchOutSelfie: attendance.punchOutSelfie,
+              status
+            }
+          : {
+              date: todayStr,
+              status
+            }
+      });
+    }
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Get Single Employee
 exports.getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).json({ message: "Employee not found" });
-    res.json(employee);
+
+    const attendance = await Attendance.find({ employee: employee._id });
+    const warningCount = attendance.reduce((sum, a) => sum + a.warnings, 0);
+
+    res.json({
+      ...employee.toObject(),
+      attendance,
+      warnings: warningCount,
+      payrollAffected: warningCount > 2 // example rule
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Update Employee
 exports.updateEmployee = async (req, res) => {

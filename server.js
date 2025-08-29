@@ -18,6 +18,7 @@ const clientsRoutes = require("./routes/clients");
 const vehiclesRoutes = require("./routes/vehiclesroutes");
 const Categoryrouter = require("./routes/categoris.js");
 const waste_Matrial_Router = require("./routes/WasteMatrial__Route.js");
+const attendanceRoutes = require("./routes/attendanceRoutes.js");
 
 // Middleware
 app.use(
@@ -40,6 +41,7 @@ app.use("/api/hrms", hrmsRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/employee", EmployeeRoutes);
 app.use("/api/vehicles", vehiclesRoutes);
+app.use("/api", attendanceRoutes);
 
 app.use("/api", clientsRoutes);
 app.use("/api", Categoryrouter);
