@@ -2,15 +2,64 @@ const Employee = require("../models/Employee");
 const Attendance = require("../models/Attendance");
 const jwt = require("jsonwebtoken");
 
-// helper: generate JWT
-const generateToken = (employee) => {
-  return jwt.sign(
-    { id: employee._id, role: "employee" },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+
+// Common JWT generator
+const generateToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
+// UNIVERSAL LOGIN: works for both Employee & User
+exports.universalLogin = async (req, res) => {
+  try {
+    const { identifier, password } = req.body; 
+    // identifier = email OR number
+
+    let account = null;
+    let role = null;
+
+    // 1️⃣ Try finding in Employee collection
+    account = await Employee.findOne({
+      $or: [{ email: identifier }, { number: identifier }]
+    });
+
+    if (account) {
+      const isMatch = await account.comparePassword(password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+      role = "employee";
+    } else {
+      // 2️⃣ Try finding in User collection
+      account = await User.findOne({
+        $or: [{ email: identifier }, { number: identifier }]
+      });
+
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+
+      const isMatch = await account.matchPassword(password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+
+      role = account.role || "user";
+    }
+
+    // 3️⃣ Generate a single token format for both
+    const token = generateToken(account._id, role);
+
+    return res.status(200).json({
+      message: "Login successful",
+      role,
+      account,
+      token
+    });
+  } catch (error) {
+    console.error("Universal login error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 // Create Employee (by Admin/HR)
 exports.createEmployee = async (req, res) => {
   try {
