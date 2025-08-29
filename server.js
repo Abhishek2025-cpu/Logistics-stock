@@ -15,11 +15,8 @@ const hrmsRoutes = require("./routes/hrmsRoutes");
 const payrollRoutes = require("./routes/payrollRoutes");
 const EmployeeRoutes = require("./routes/employeeRoutes");
 const clientsRoutes = require("./routes/clients");
-<<<<<<< HEAD
 const Categoryrouter = require("./routes/categoris.js");
-=======
 const vehiclesRoutes = require("./routes/vehiclesroutes");
->>>>>>> 7fe7bced2be61a5041ec59bbd784419475969f44
 
 // Middleware
 app.use(
