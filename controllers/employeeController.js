@@ -25,7 +25,7 @@ exports.createEmployee = async (req, res) => {
       employeeId, name, number, email, address,
       companyName, workingHours, workingDays,
       department, role, salary, leave,
-      password, // will be hashed in pre-save
+      password, 
       media: mediaUrls
     });
 
