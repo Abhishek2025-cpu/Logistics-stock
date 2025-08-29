@@ -19,6 +19,7 @@ const vehiclesRoutes = require("./routes/vehiclesroutes");
 const Categoryrouter = require("./routes/categoris.js");
 const waste_Matrial_Router = require("./routes/WasteMatrial__Route.js");
 const attendanceRoutes = require("./routes/attendanceRoutes.js");
+const departmentRouter = require("./routes/departmaent__route.js");
 
 // Middleware
 app.use(
@@ -46,6 +47,7 @@ app.use("/api", attendanceRoutes);
 app.use("/api", clientsRoutes);
 app.use("/api", Categoryrouter);
 app.use("/api", waste_Matrial_Router);
+app.use("/api", departmentRouter);
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
