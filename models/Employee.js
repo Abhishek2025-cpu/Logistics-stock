@@ -2,12 +2,10 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const employeeSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // link to User
-
   employeeId: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   number: { type: String, required: true, unique: true },
-  email: { type: String, unique: true, sparse: true },
+  email: { type: String, unique: true, sparse: true }, // optional
   address: { type: String, required: true },
   companyName: { type: String, required: true },
   workingHours: { type: String, required: true },
@@ -15,32 +13,23 @@ const employeeSchema = new mongoose.Schema({
   department: { type: String, required: true },
   role: { type: String, required: true },
   salary: { type: Number, required: true },
-  leave: { type: Number, default: 0 },
-  password: { type: String, required: true },
+  leave: { type: Number, default: 0 }, // default leave balance
+  password: { type: String, required: true }, // hashed
   media: [{ type: String }],
+  // models/attendance.js
+// add these fields to your existing schema
+leaveType: { type: String, enum: ["CL", "SL", "PL", "UL"], default: undefined }, // Casual, Sick, Paid(??), Unpaid
+leaveApproved: { type: Boolean, default: false }, // if you want approval gate
+
 }, { timestamps: true });
-
-employeeSchema.pre(/^find/, function (next) {
-  this.populate("user", "name email number city role department key isActive");
-  next();
-});
-
 
 // hash password before save
 employeeSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-
-  // If password already looks like a bcrypt hash → skip hashing
-  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$") || this.password.startsWith("$2y$")) {
-    return next();
-  }
-
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
-
-
 
 // method to compare password
 employeeSchema.methods.comparePassword = async function (candidatePassword) {
