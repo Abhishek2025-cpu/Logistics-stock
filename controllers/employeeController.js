@@ -1,33 +1,74 @@
-const Employee = require("../models/Employee");
+const Employee = require("../models/employee");
+const jwt = require("jsonwebtoken");
 
-// Create Employee
+// helper: generate JWT
+const generateToken = (employee) => {
+  return jwt.sign(
+    { id: employee._id, role: "employee" },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+};
+
+// Create Employee (by Admin/HR)
 exports.createEmployee = async (req, res) => {
   try {
-    const { employeeId, name, number, email, address, companyName, workingHours, workingDays, department, role, salary } = req.body;
-    
-    const mediaUrls = req.files?.map(file => file.path) || []; // cloudinary gives .path as URL
+    const {
+      employeeId, name, number, email, address,
+      companyName, workingHours, workingDays,
+      department, role, salary, leave, password
+    } = req.body;
+
+    const mediaUrls = req.files?.map(file => file.path) || [];
 
     const employee = new Employee({
-      employeeId,
-      name,
-      number,
-      email,
-      address,
-      companyName,
-      workingHours,
-      workingDays,
-      department,
-      role,
-      salary,
+      employeeId, name, number, email, address,
+      companyName, workingHours, workingDays,
+      department, role, salary, leave,
+      password, // will be hashed in pre-save
       media: mediaUrls
     });
 
     await employee.save();
-    res.status(201).json({ message: "Employee created successfully", employee });
+
+    const token = generateToken(employee);
+
+    res.status(201).json({
+      message: "Employee registered successfully",
+      employee,
+      token
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Employee Login
+exports.loginEmployee = async (req, res) => {
+  try {
+    const { identifier, password } = req.body; // identifier = number OR email
+
+    const employee = await Employee.findOne({
+      $or: [{ number: identifier }, { email: identifier }]
+    });
+
+    if (!employee) return res.status(404).json({ message: "Employee not found" });
+
+    const isMatch = await employee.comparePassword(password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = generateToken(employee);
+
+    res.json({
+      message: "Login successful",
+      employee,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 // Get All Employees
 exports.getEmployees = async (req, res) => {
