@@ -12,42 +12,38 @@ const generateToken = (id, role) => {
 exports.universalLogin = async (req, res) => {
   try {
     const { identifier, password } = req.body; 
-    // identifier = email OR number
-
     let account = null;
     let role = null;
 
-    // 1️⃣ Try finding in Employee collection
+    // 1️⃣ Try Employee
     account = await Employee.findOne({
       $or: [{ email: identifier }, { number: identifier }]
     });
-
     if (account) {
       const isMatch = await account.comparePassword(password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Invalid credentials" });
-      }
+      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
       role = "employee";
     } else {
-      // 2️⃣ Try finding in User collection
+      // 2️⃣ Try User
       account = await User.findOne({
         $or: [{ email: identifier }, { number: identifier }]
       });
+      if (!account) return res.status(404).json({ message: "Account not found" });
 
-      if (!account) {
-        return res.status(404).json({ message: "Account not found" });
+      let isMatch = false;
+
+      // check if password is hashed or plain
+      if (account.password.startsWith("$2")) {
+        isMatch = await account.matchPassword(password);
+      } else {
+        isMatch = account.password === password;
       }
 
-      const isMatch = await account.matchPassword(password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Invalid credentials" });
-      }
-
+      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
       role = account.role || "user";
     }
 
-    // 3️⃣ Generate a single token format for both
-    const token = generateToken(account._id, role);
+    const token = jwt.sign({ id: account._id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     return res.status(200).json({
       message: "Login successful",
@@ -60,6 +56,7 @@ exports.universalLogin = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 // Create Employee (by Admin/HR)
 exports.createEmployee = async (req, res) => {
   try {
