@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
-const employeeSchema = new mongoose.Schema(
+const categorySchema = new mongoose.Schema(
   {
     categoryName: { type: String, required: true },
   },
   { timestamps: true }
 );
 
-const CategoryModal = mongoose.model("Category", employeeSchema);
+const CategoryModal = mongoose.model("Category", categorySchema);
 
 module.exports = CategoryModal;
