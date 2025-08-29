@@ -12,7 +12,7 @@ const WasteMaterialSchema = new mongoose.Schema(
     stock: { type: Number, required: true },
     pricePerKg: { type: Number, required: true },
     image: { type: String, required: true },
-    status: { type: String, enum: ["panding", "complete"], default: "panding" },
+    status: { type: String, enum: ["pending", "complete"], default: "pending" },
   },
   { timestamps: true }
 );
