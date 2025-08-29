@@ -6,7 +6,7 @@ const { verifyAdminHRToken } = require("../middleware/auth");
 const employeeController = require("../controllers/employeeController");
 
 // CREATE
-router.post("/add-employees", (req, res, next) => {
+router.post("/employees", (req, res, next) => {
   try {
     verifyAdminHRToken(req);
     next();
@@ -14,6 +14,9 @@ router.post("/add-employees", (req, res, next) => {
     return res.status(401).json({ error: error.message });
   }
 }, upload.array("media", 5), employeeController.createEmployee);
+
+// EMPLOYEE LOGIN
+router.post("/employees/login", employeeController.loginEmployee);
 
 // READ ALL
 router.get("/get-employees", employeeController.getEmployees);
