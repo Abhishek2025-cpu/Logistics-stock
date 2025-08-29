@@ -1,16 +1,44 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../middleware/uploadProfile");
+
+const upload = require("../middleware/uploadProfile"); 
+const { verifyAdminHRToken } = require("../middleware/auth");
 const employeeController = require("../controllers/employeeController");
 
-// Admin/HR CRUD
-router.post("/register", upload.single("profilePic"), employeeController.registerEmployee);
-router.get("/all", employeeController.getAllEmployees);
-router.put("/update/:employeeId", upload.single("profilePic"), employeeController.updateEmployee);
-router.delete("/delete/:employeeId", employeeController.deleteEmployee);
-router.patch("/:employeeId/toggle-status", employeeController.toggleEmployeeStatus);
+// CREATE
+router.post("/add-employees", (req, res, next) => {
+  try {
+    verifyAdminHRToken(req);
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: error.message });
+  }
+}, upload.array("media", 5), employeeController.createEmployee);
 
-// Employee Login
-router.post("/signin", employeeController.employeeSignIn);
+// READ ALL
+router.get("/get-employees", employeeController.getEmployees);
+
+// READ ONE
+router.get("/employee/:id", employeeController.getEmployeeById);
+
+// UPDATE
+router.put("/update-employee/:id", (req, res, next) => {
+  try {
+    verifyAdminHRToken(req);
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: error.message });
+  }
+}, upload.array("media", 5), employeeController.updateEmployee);
+
+// DELETE
+router.delete("/delete-employees/:id", (req, res, next) => {
+  try {
+    verifyAdminHRToken(req);
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: error.message });
+  }
+}, employeeController.deleteEmployee);
 
 module.exports = router;
