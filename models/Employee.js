@@ -29,6 +29,12 @@ employeeSchema.pre(/^find/, function (next) {
 // hash password before save
 employeeSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
+
+  // check if it's already a bcrypt hash (starts with $2a or $2b or $2y)
+  if (this.password.startsWith("$2")) {
+    return next(); // already hashed
+  }
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
