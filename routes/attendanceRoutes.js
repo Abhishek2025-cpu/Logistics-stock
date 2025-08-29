@@ -28,7 +28,7 @@ router.put("/attendance/punch-out", (req, res, next) => {
 }, upload.single("selfie"), attendanceController.punchOut);
 
 // Correct Attendance (HR/Admin only)
-router.patch("/attendance/correct", (req, res, next) => {
+router.put("/attendance/correct", (req, res, next) => {
   try {
     verifyAdminHRToken(req);
     next();
