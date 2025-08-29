@@ -1,6 +1,6 @@
 // routes.js
-const { verifyAdminHRToken } = require("../middlewares/auth");
-const payrollController = require("../controller/payrollController");
+const { verifyAdminHRToken } = require("../middleware/auth");
+const payrollController = require("../controllers/payrollController");
 const express = require("express");
 const router = express.Router();
 
