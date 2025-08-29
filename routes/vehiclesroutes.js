@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const upload = require("../middleware/uploadProfile");
-const { verifyAdminHRToken } = require("../middlewares/auth");
+const { verifyAdminHRToken } = require("../middleware/auth");
 const vehicleController = require("../controllers/vehicleController");
 
 // CREATE
