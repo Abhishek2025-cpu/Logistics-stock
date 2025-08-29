@@ -22,41 +22,11 @@ exports.createEmployee = async (req, res) => {
 
     const mediaUrls = req.files?.map(file => file.path) || [];
 
-    // 🔍 Check if user already exists
-    let user = await User.findOne({ $or: [{ email }, { number }] });
-
-    if (!user) {
-      // create user if not exists
-      user = new User({
-        name,
-        email,
-        number,
-        city: address, // mapping address to city if needed
-        password,
-        role,
-        department,
-        key: employeeId,
-        basePay: salary
-      });
-      await user.save();
-    }
-
-    // Create employee linked to this user
     const employee = new Employee({
-      user: user._id, // 🔗 linking user
-      employeeId,
-      name,
-      number,
-      email,
-      address,
-      companyName,
-      workingHours,
-      workingDays,
-      department,
-      role,
-      salary,
-      leave,
-      password,
+      employeeId, name, number, email, address,
+      companyName, workingHours, workingDays,
+      department, role, salary, leave,
+      password, 
       media: mediaUrls
     });
 
@@ -67,14 +37,12 @@ exports.createEmployee = async (req, res) => {
     res.status(201).json({
       message: "Employee registered successfully",
       employee,
-      user, // show linked user info too
       token
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // Employee Login
 exports.loginEmployee = async (req, res) => {
@@ -109,20 +77,25 @@ exports.getEmployees = async (req, res) => {
     const employees = await Employee.find();
 
     const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = today.toISOString().split("T")[0]; // YYYY-MM-DD
 
     const result = [];
 
     for (const emp of employees) {
+      // find today's attendance
       const attendance = await Attendance.findOne({
         employee: emp._id,
         date: todayStr
       });
 
       let status = "A"; // default Absent
+
       if (attendance) {
-        if (attendance.punchIn && attendance.punchOut) status = "P";
-        else if (attendance.punchIn && !attendance.punchOut) status = "HD";
+        if (attendance.punchIn && attendance.punchOut) {
+          status = "P"; // Full day Present
+        } else if (attendance.punchIn && !attendance.punchOut) {
+          status = "HD"; // Half Day
+        }
       }
 
       result.push({
@@ -131,18 +104,13 @@ exports.getEmployees = async (req, res) => {
         name: emp.name,
         number: emp.number,
         email: emp.email,
-        address: emp.address,
-        companyName: emp.companyName,
-        workingHours: emp.workingHours,
-        workingDays: emp.workingDays,
         department: emp.department,
         role: emp.role,
         salary: emp.salary,
+        workingHours: emp.workingHours,
+        workingDays: emp.workingDays,
         leave: emp.leave,
         warnings: emp.warnings || 0,
-
-        // 🔹 Media (Cloudinary URLs saved at creation)
-        media: emp.media || [],
 
         // Attendance details
         attendance: attendance
@@ -166,7 +134,6 @@ exports.getEmployees = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // Get Single Employee
 exports.getEmployeeById = async (req, res) => {
