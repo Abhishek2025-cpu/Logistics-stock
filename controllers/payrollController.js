@@ -1,7 +1,7 @@
 // controllers/payrollController.js
 const Attendance = require("../models/Attendance");
 const Employee = require("../models/Employee");
-const Payroll = require("../models/payroll");
+const Payroll = require("../models/Payroll");
 const { listMonthDates, toYMD } = require("../utils/dateHelpers");
 const { countExpectedWorkingDays } = require("../utils/workdayHelpers");
 const rules = require("../config/payrollRules");
