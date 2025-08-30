@@ -129,33 +129,41 @@ exports.punchOut = async (req, res) => {
       }
     }
 
-    if (attendance.punchIn && attendance.punchOut) {
-      // Calculate actual worked minutes
-      const workedMinutes = Math.floor(
-        (attendance.punchOut - attendance.punchIn) / (1000 * 60)
-      );
+  if (attendance.punchIn && attendance.punchOut) {
+  // Calculate actual worked minutes
+  const workedMinutes = Math.floor(
+    (attendance.punchOut - attendance.punchIn) / (1000 * 60)
+  );
 
-      // Check late by >15 minutes
-      const punchInTotalMin =
-        attendance.punchIn.getHours() * 60 + attendance.punchIn.getMinutes();
-      const startTotalMin = startH * 60 + startM;
+  // Check late punch-in
+  const punchInTotalMin =
+    attendance.punchIn.getHours() * 60 + attendance.punchIn.getMinutes();
+  const startTotalMin = startH * 60 + startM;
 
-      if (punchInTotalMin > startTotalMin + 15) {
-        attendance.warnings = (attendance.warnings || 0) + 1;
-      }
+  if (punchInTotalMin > startTotalMin + 15) {
+    attendance.warnings = (attendance.warnings || 0) + 1;
+  }
 
-      // Decide Status
-      if (workedMinutes >= requiredMinutes) {
-        status = "P"; // Present
-      } else if (workedMinutes >= requiredMinutes / 2) {
-        status = "HD"; // Half Day
-      } else {
-        status = "A"; // Absent
-      }
-    }
+  // Decide Status
+  if (workedMinutes >= requiredMinutes) {
+    status = "P"; // Present
+  } else if (workedMinutes >= requiredMinutes / 2) {
+    status = "HD"; // Half Day
+  } else {
+    status = "A"; // Absent
+  }
 
-    attendance.status = status;
-    await attendance.save();
+  // ✅ Overtime Calculation
+  let otMinutes = 0;
+  if (workedMinutes > requiredMinutes) {
+    otMinutes = workedMinutes - requiredMinutes;
+  }
+  attendance.otMinutes = otMinutes;
+}
+
+attendance.status = status;
+await attendance.save();
+
 
     res.json({
       message: "Punch Out recorded successfully",
@@ -182,12 +190,20 @@ exports.correctAttendance = async (req, res) => {
     if (punchIn) attendance.punchIn = new Date(punchIn);
     if (punchOut) attendance.punchOut = new Date(punchOut);
 
-    // Recalculate status
+    let workedMinutes = 0;
+    let requiredMinutes = 8 * 60; // default 8 hours
+    let otMinutes = 0;
+
     if (attendance.punchIn && attendance.punchOut) {
       const employee = await Employee.findById(employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
 
-      let requiredMinutes = 8 * 60; // default 8 hrs
-      let startH = 9, startM = 0, endH = 18, endM = 0; // default 09:00-18:00
+      let startH = 9,
+        startM = 0,
+        endH = 18,
+        endM = 0;
 
       if (employee.workingHours) {
         const workHours = employee.workingHours.trim();
@@ -233,7 +249,7 @@ exports.correctAttendance = async (req, res) => {
       }
 
       // Actual worked minutes
-      const workedMinutes = Math.floor(
+      workedMinutes = Math.floor(
         (attendance.punchOut - attendance.punchIn) / (1000 * 60)
       );
 
@@ -245,7 +261,14 @@ exports.correctAttendance = async (req, res) => {
       } else {
         attendance.status = "A"; // Absent
       }
+
+      // Overtime
+      if (workedMinutes > requiredMinutes) {
+        otMinutes = workedMinutes - requiredMinutes;
+      }
     }
+
+    attendance.otMinutes = otMinutes;
 
     await attendance.save();
     res.json({ message: "Attendance corrected by HR/Admin", attendance });
@@ -253,4 +276,5 @@ exports.correctAttendance = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
