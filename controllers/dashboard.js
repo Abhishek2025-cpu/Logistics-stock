@@ -2,6 +2,7 @@ const { verifyToken } = require("../middleware/auth");
 const ClientModal = require("../models/Clients");
 const Department__Modal = require("../models/Department");
 const Employee = require("../models/Employee");
+const vehicle = require("../models/vehicle");
 
 const dashboard__controller = async (req, res) => {
   try {
@@ -33,6 +34,13 @@ const dashboard__controller = async (req, res) => {
       createdAt: { $gte: startOfToday, $lte: endOfToday },
     });
 
+    const total_loading_vehicles = await vehicle.countDocuments({
+      type: "Loading",
+    });
+    const total_Unloading_vehicles = await vehicle.countDocuments({
+      type: "Unloading",
+    });
+
     return res.status(200).json({
       status: 200,
       message: "Dashboard data",
@@ -48,6 +56,10 @@ const dashboard__controller = async (req, res) => {
       latest: {
         new_Clients,
         new_Employees,
+      },
+      vehicles: {
+        total_loading_vehicles,
+        total_Unloading_vehicles,
       },
     });
   } catch (error) {
