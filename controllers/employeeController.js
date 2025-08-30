@@ -164,19 +164,22 @@ exports.getEmployees = async (req, res) => {
         warnings: emp.warnings || 0,
 
         // Attendance details
-        attendance: attendance
-          ? {
-              date: attendance.date,
-              punchIn: attendance.punchIn,
-              punchOut: attendance.punchOut,
-              punchInSelfie: attendance.punchInSelfie,
-              punchOutSelfie: attendance.punchOutSelfie,
-              status
-            }
-          : {
-              date: todayStr,
-              status
-            }
+       attendance: attendance
+  ? {
+      date: attendance.date,
+      punchIn: attendance.punchIn,
+      punchOut: attendance.punchOut,
+      punchInSelfie: attendance.punchInSelfie,
+      punchOutSelfie: attendance.punchOutSelfie,
+      status,
+      otMinutes: attendance.otMinutes || 0
+    }
+  : {
+      date: todayStr,
+      status,
+      otMinutes: 0
+    }
+
       });
     }
 

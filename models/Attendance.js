@@ -11,7 +11,8 @@ const attendanceSchema = new mongoose.Schema({
   warnings: { type: Number, default: 0 },
 
 leaveType: { type: String, enum: ["CL", "SL", "PL", "UL"], default: undefined }, // Casual, Sick, Paid(??), Unpaid
-leaveApproved: { type: Boolean, default: false }, // if you want approval gate
+leaveApproved: { type: Boolean, default: false },
+  otMinutes: { type: Number, default: 0 }, // if you want approval gate
 
 }, { timestamps: true });
 
