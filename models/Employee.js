@@ -17,6 +17,10 @@ const employeeSchema = new mongoose.Schema({
   password: { type: String, required: true }, // hashed
   media: [{ type: String }],
 
+  // new deduction fields
+  deductionType: { type: String, default: null }, 
+  deductionAmount: { type: Number, default: 0 },
+
   // leave management
   leaveType: { type: String, enum: ["CL", "SL", "PL", "UL"], default: undefined }, 
   leaveApproved: { type: Boolean, default: false },

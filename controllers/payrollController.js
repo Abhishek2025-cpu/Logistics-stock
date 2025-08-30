@@ -51,7 +51,7 @@ async function computePayrollForEmployeeMonth(employee, monthStr) {
     // Late warnings
     lateWarnings += (rec.warnings || 0);
 
-    // Leaves override status if present (and approved if you require that)
+    // Leaves override status if present
     if (rec.leaveType) {
       const nonDed = !!rules.nonDeductibleLeaves[rec.leaveType];
       if (nonDed) nonDeductLeaves += 1;
@@ -83,13 +83,33 @@ async function computePayrollForEmployeeMonth(employee, monthStr) {
   const halfDayDeduction = halfDays * rules.halfDayFraction * perDayRate;
   const leaveDeduction = deductLeaves * perDayRate;
 
-  // Late penalty: allow N free, then each extra late deducts fraction of a day
+  // Late penalty
   const extraLates = Math.max(0, lateWarnings - rules.lateFreeAllowances);
   const lateDeduction = extraLates * rules.latePenaltyPerExtraLateDayFraction * perDayRate;
 
-  const grossEarnings = baseSalary; // adjust if you pay OT/incentives
-  const totalDeductions = absenceDeduction + halfDayDeduction + leaveDeduction + lateDeduction;
+  const grossEarnings = baseSalary;
 
+  // Initialize deductions object
+  const deductions = {
+    absence: Math.round(absenceDeduction * 100) / 100,
+    halfDay: Math.round(halfDayDeduction * 100) / 100,
+    leave: Math.round(leaveDeduction * 100) / 100,
+    late: Math.round(lateDeduction * 100) / 100,
+    other: 0
+  };
+
+  // ✅ Add employee-level deduction (if any)
+  if (employee.deductionAmount && employee.deductionAmount > 0) {
+    const type = employee.deductionType || "other";
+    if (deductions[type] !== undefined) {
+      deductions[type] += employee.deductionAmount;
+    } else {
+      deductions.other += employee.deductionAmount;
+    }
+  }
+
+  // Total deductions & net pay
+  const totalDeductions = Object.values(deductions).reduce((a, b) => a + b, 0);
   const netPay = Math.max(0, Math.round((grossEarnings - totalDeductions) * 100) / 100);
 
   return {
@@ -103,16 +123,11 @@ async function computePayrollForEmployeeMonth(employee, monthStr) {
     lateWarnings,
     perDayRate: Math.round(perDayRate * 100) / 100,
     grossEarnings,
-    deductions: {
-      absence: Math.round(absenceDeduction * 100) / 100,
-      halfDay: Math.round(halfDayDeduction * 100) / 100,
-      leave: Math.round(leaveDeduction * 100) / 100,
-      late: Math.round(lateDeduction * 100) / 100,
-      other: 0
-    },
+    deductions,
     netPay
   };
 }
+
 
 exports.generateMonthlyPayroll = async (req, res) => {
   try {
@@ -174,7 +189,7 @@ exports.getPayrolls = async (req, res) => {
     if (status) q.status = status;
     if (employeeId) q.employee = employeeId;
 
-    const rows = await Payroll.find(q).populate("employee", "employeeId name number department role salary");
+    const rows = await Payroll.find(q).populate("employee", "employeeId name number department role salary deductionType deductionAmount");
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -183,7 +198,7 @@ exports.getPayrolls = async (req, res) => {
 
 exports.getPayrollById = async (req, res) => {
   try {
-    const row = await Payroll.findById(req.params.id).populate("employee", "employeeId name number department role salary");
+    const row = await Payroll.findById(req.params.id).populate("employee", "employeeId name number department role salary deductionType deductionAmount");
     if (!row) return res.status(404).json({ message: "Payroll not found" });
     res.json(row);
   } catch (err) {

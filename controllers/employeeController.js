@@ -63,17 +63,31 @@ exports.createEmployee = async (req, res) => {
     const {
       employeeId, name, number, email, address,
       companyName, workingHours, workingDays,
-      department, role, salary, leave, password
+      department, role, salary, leave, password,
+      deductionType, deductionAmount
     } = req.body;
 
     const mediaUrls = req.files?.map(file => file.path) || [];
 
     const employee = new Employee({
-      employeeId, name, number, email, address,
-      companyName, workingHours, workingDays,
-      department, role, salary, leave,
-      password, 
-      media: mediaUrls
+      employeeId,
+      name,
+      number,
+      email,
+      address,
+      companyName,
+      workingHours,
+      workingDays,
+      department,
+      role,
+      salary,
+      leave,
+      password,
+      media: mediaUrls,
+
+      // new optional fields
+      deductionType: deductionType || null,
+      deductionAmount: deductionAmount || 0,
     });
 
     await employee.save();
@@ -89,6 +103,7 @@ exports.createEmployee = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Employee Login
 exports.loginEmployee = async (req, res) => {
