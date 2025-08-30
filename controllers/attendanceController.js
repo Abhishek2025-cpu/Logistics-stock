@@ -190,12 +190,20 @@ exports.correctAttendance = async (req, res) => {
     if (punchIn) attendance.punchIn = new Date(punchIn);
     if (punchOut) attendance.punchOut = new Date(punchOut);
 
-    // Recalculate status
+    let workedMinutes = 0;
+    let requiredMinutes = 8 * 60; // default 8 hours
+    let otMinutes = 0;
+
     if (attendance.punchIn && attendance.punchOut) {
       const employee = await Employee.findById(employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
 
-      let requiredMinutes = 8 * 60; // default 8 hrs
-      let startH = 9, startM = 0, endH = 18, endM = 0; // default 09:00-18:00
+      let startH = 9,
+        startM = 0,
+        endH = 18,
+        endM = 0;
 
       if (employee.workingHours) {
         const workHours = employee.workingHours.trim();
@@ -241,7 +249,7 @@ exports.correctAttendance = async (req, res) => {
       }
 
       // Actual worked minutes
-      const workedMinutes = Math.floor(
+      workedMinutes = Math.floor(
         (attendance.punchOut - attendance.punchIn) / (1000 * 60)
       );
 
@@ -253,14 +261,14 @@ exports.correctAttendance = async (req, res) => {
       } else {
         attendance.status = "A"; // Absent
       }
+
+      // Overtime
+      if (workedMinutes > requiredMinutes) {
+        otMinutes = workedMinutes - requiredMinutes;
+      }
     }
 
-    // ✅ Overtime Calculation
-     let otMinutes = 0;
-    if (workedMinutes > requiredMinutes) {
-     otMinutes = workedMinutes - requiredMinutes;
-     }
-attendance.otMinutes = otMinutes;
+    attendance.otMinutes = otMinutes;
 
     await attendance.save();
     res.json({ message: "Attendance corrected by HR/Admin", attendance });
@@ -268,4 +276,5 @@ attendance.otMinutes = otMinutes;
     res.status(500).json({ error: err.message });
   }
 };
+
 
