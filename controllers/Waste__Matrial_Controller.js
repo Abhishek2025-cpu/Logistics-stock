@@ -1,4 +1,4 @@
-const { verifyToken } = require("../middleware/auth");
+const { verifyToken, verifyAdminHRToken } = require("../middleware/auth");
 const CategoryModal = require("../models/Category");
 const WasteMaterialModal = require("../models/Waste__Matrial");
 
@@ -9,6 +9,7 @@ const create__WasteMaterial = async (req, res) => {
     const image = req.file?.path;
 
     verifyToken(req);
+    verifyAdminHRToken(req);
 
     const category = await CategoryModal.findById(categoryId);
     if (!category) {
