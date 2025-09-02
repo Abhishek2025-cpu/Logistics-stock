@@ -1,7 +1,7 @@
 const Employee = require("../models/Employee");
 const Attendance = require("../models/Attendance");
 const jwt = require("jsonwebtoken");
-
+const User = require("../models/User");
 
 // Common JWT generator
 const generateToken = (id, role) => {
@@ -11,24 +11,26 @@ const generateToken = (id, role) => {
 // UNIVERSAL LOGIN: works for both Employee & User
 exports.universalLogin = async (req, res) => {
   try {
-    const { identifier, password } = req.body; 
+    const { identifier, password } = req.body;
     let account = null;
     let role = null;
 
     // 1️⃣ Try Employee
     account = await Employee.findOne({
-      $or: [{ email: identifier }, { number: identifier }]
+      $or: [{ email: identifier }, { number: identifier }],
     });
     if (account) {
       const isMatch = await account.comparePassword(password);
-      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+      if (!isMatch)
+        return res.status(400).json({ message: "Invalid credentials" });
       role = "employee";
     } else {
       // 2️⃣ Try User
       account = await User.findOne({
-        $or: [{ email: identifier }, { number: identifier }]
+        $or: [{ email: identifier }, { number: identifier }],
       });
-      if (!account) return res.status(404).json({ message: "Account not found" });
+      if (!account)
+        return res.status(404).json({ message: "Account not found" });
 
       let isMatch = false;
 
@@ -39,17 +41,20 @@ exports.universalLogin = async (req, res) => {
         isMatch = account.password === password;
       }
 
-      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+      if (!isMatch)
+        return res.status(400).json({ message: "Invalid credentials" });
       role = account.role || "user";
     }
 
-    const token = jwt.sign({ id: account._id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: account._id, role }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     return res.status(200).json({
       message: "Login successful",
       role,
       account,
-      token
+      token,
     });
   } catch (error) {
     console.error("Universal login error:", error);
@@ -61,19 +66,38 @@ exports.universalLogin = async (req, res) => {
 exports.createEmployee = async (req, res) => {
   try {
     const {
-      employeeId, name, number, email, address,
-      companyName, workingHours, workingDays,
-      department, role, salary, leave, password
+      employeeId,
+      name,
+      number,
+      email,
+      address,
+      companyName,
+      workingHours,
+      workingDays,
+      department,
+      role,
+      salary,
+      leave,
+      password,
     } = req.body;
 
-    const mediaUrls = req.files?.map(file => file.path) || [];
+    const mediaUrls = req.files?.map((file) => file.path) || [];
 
     const employee = new Employee({
-      employeeId, name, number, email, address,
-      companyName, workingHours, workingDays,
-      department, role, salary, leave,
-      password, 
-      media: mediaUrls
+      employeeId,
+      name,
+      number,
+      email,
+      address,
+      companyName,
+      workingHours,
+      workingDays,
+      department,
+      role,
+      salary,
+      leave,
+      password,
+      media: mediaUrls,
     });
 
     await employee.save();
@@ -83,7 +107,7 @@ exports.createEmployee = async (req, res) => {
     res.status(201).json({
       message: "Employee registered successfully",
       employee,
-      token
+      token,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -96,7 +120,7 @@ exports.loginEmployee = async (req, res) => {
     const { identifier, password } = req.body; // identifier = number OR email
 
     const employee = await Employee.findOne({
-      $or: [{ number: identifier }, { email: identifier }]
+      $or: [{ number: identifier }, { email: identifier }],
     });
 
     if (!employee) {
@@ -113,14 +137,12 @@ exports.loginEmployee = async (req, res) => {
     res.json({
       message: "Login successful",
       employee,
-      token
+      token,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 // Get All Employees
 exports.getEmployees = async (req, res) => {
@@ -136,7 +158,7 @@ exports.getEmployees = async (req, res) => {
       // find today's attendance
       const attendance = await Attendance.findOne({
         employee: emp._id,
-        date: todayStr
+        date: todayStr,
       });
 
       let status = "A"; // default Absent
@@ -164,22 +186,21 @@ exports.getEmployees = async (req, res) => {
         warnings: emp.warnings || 0,
 
         // Attendance details
-       attendance: attendance
-  ? {
-      date: attendance.date,
-      punchIn: attendance.punchIn,
-      punchOut: attendance.punchOut,
-      punchInSelfie: attendance.punchInSelfie,
-      punchOutSelfie: attendance.punchOutSelfie,
-      status,
-      otMinutes: attendance.otMinutes || 0
-    }
-  : {
-      date: todayStr,
-      status,
-      otMinutes: 0
-    }
-
+        attendance: attendance
+          ? {
+              date: attendance.date,
+              punchIn: attendance.punchIn,
+              punchOut: attendance.punchOut,
+              punchInSelfie: attendance.punchInSelfie,
+              punchOutSelfie: attendance.punchOutSelfie,
+              status,
+              otMinutes: attendance.otMinutes || 0,
+            }
+          : {
+              date: todayStr,
+              status,
+              otMinutes: 0,
+            },
       });
     }
 
@@ -193,33 +214,46 @@ exports.getEmployees = async (req, res) => {
 exports.getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    const user = await User.findById(req.params.id);
+    if (!employee && !user)
+      return res.status(404).json({ message: "Employee not found" });
 
-    const attendance = await Attendance.find({ employee: employee._id });
+    let attendance;
+    if (employee) {
+      attendance = await Attendance.find({ employee: employee._id });
+    }
+    else if(user){
+      attendance = await Attendance.find({ user: user._id });
+    }
+
     const warningCount = attendance.reduce((sum, a) => sum + a.warnings, 0);
 
     res.json({
-      ...employee.toObject(),
+      employee: employee || user,
       attendance,
       warnings: warningCount,
-      payrollAffected: warningCount > 2 // example rule
+      payrollAffected: warningCount > 2, // example rule
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-
 // Update Employee
 exports.updateEmployee = async (req, res) => {
   try {
-    const mediaUrls = req.files?.map(file => file.path) || [];
-    
+    const mediaUrls = req.files?.map((file) => file.path) || [];
+
     const updatedData = { ...req.body };
     if (mediaUrls.length > 0) updatedData.media = mediaUrls;
 
-    const employee = await Employee.findByIdAndUpdate(req.params.id, updatedData, { new: true });
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    const employee = await Employee.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true }
+    );
+    if (!employee)
+      return res.status(404).json({ message: "Employee not found" });
 
     res.json({ message: "Employee updated successfully", employee });
   } catch (error) {
@@ -231,7 +265,8 @@ exports.updateEmployee = async (req, res) => {
 exports.deleteEmployee = async (req, res) => {
   try {
     const employee = await Employee.findByIdAndDelete(req.params.id);
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    if (!employee)
+      return res.status(404).json({ message: "Employee not found" });
 
     res.json({ message: "Employee deleted successfully" });
   } catch (error) {

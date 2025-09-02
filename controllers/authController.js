@@ -23,14 +23,13 @@ const generateToken = (id, role, expiryDate) => {
 
 const verifyAdminHRToken = (req) => {
   const decoded = verifyToken(req);
-  const userRole = decoded.role ? decoded.role.toLowerCase() : '';
+  const userRole = decoded.role ? decoded.role.toLowerCase() : "";
 
-  if (userRole !== 'admin' && userRole !== 'hr') {
+  if (userRole !== "admin" && userRole !== "hr") {
     throw new Error("Unauthorized: Only Admin or HR can perform this action");
   }
   return decoded;
 };
-
 
 const verifyToken = (req) => {
   const token = req.headers["authorization"];
@@ -44,13 +43,17 @@ exports.register = async (req, res) => {
     const { name, email, number, city, password } = req.body;
 
     if (!name || !email || !number || !city || !password) {
-      return res.status(400).json({ status: 400, message: "All fields are required" });
+      return res
+        .status(400)
+        .json({ status: 400, message: "All fields are required" });
     }
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(409).json({ status: 409, message: "User already exists" });
+      return res
+        .status(409)
+        .json({ status: 409, message: "User already exists" });
     }
 
     // Create user with default role & department as null, key as null
@@ -60,10 +63,10 @@ exports.register = async (req, res) => {
       number,
       city,
       password,
-      role: null,          // default null
-      department: null,    // default null
-      key: null   ,         // default null (Employee ID will be updated later),
-       _skipHash: true  
+      role: null, // default null
+      department: null, // default null
+      key: null, // default null (Employee ID will be updated later),
+      _skipHash: true,
     });
 
     // Generate token valid till midnight IST
@@ -86,16 +89,15 @@ exports.register = async (req, res) => {
         email: user.email,
         number: user.number,
         city: user.city,
-        role: user.role,             // null
+        role: user.role, // null
         department: user.department, // null
-        key: user.key                // null
+        key: user.key, // null
       },
     });
   } catch (error) {
     return res.status(500).json({ status: 500, message: error.message });
   }
 };
-
 
 exports.updateUserDetails = async (req, res) => {
   try {
@@ -141,13 +143,14 @@ exports.updateUserDetails = async (req, res) => {
   }
 };
 
-
 // @desc Login User
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ status: 400, message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ status: 400, message: "Email and password are required" });
     }
 
     const user = await User.findOne({ email });
@@ -157,7 +160,9 @@ exports.login = async (req, res) => {
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(401).json({ status: 401, message: "Invalid email or password" });
+      return res
+        .status(401)
+        .json({ status: 401, message: "Invalid email or password" });
     }
 
     let token = user.token;
@@ -207,15 +212,30 @@ exports.logout = async (req, res) => {
   }
 };
 
-
-
-
 // @desc Get all users with attendance
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
       .populate("attendances") // populate attendance for each user
-      .select("-password");   // hide password field
+      .select("-password"); // hide password field
+
+    return res.status(200).json({
+      status: 200,
+      message: "Users fetched successfully",
+      data: users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+exports.get_Single_Users = async (req, res) => {
+  try {
+    const users = await User.findById(req.params.id)
+      .populate("attendances")
+      .select("-password");
 
     return res.status(200).json({
       status: 200,
