@@ -58,7 +58,7 @@ exports.universalLogin = async (req, res) => {
     });
   } catch (error) {
     console.error("Universal login error:", error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message }); 
   }
 };
 
